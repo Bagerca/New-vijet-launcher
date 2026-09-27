@@ -34,11 +34,12 @@ export class Store {
       config: {
         obsPath: '',
         twitchChannel: 'ksusha__sher',
-        githubRepo: 'ksusha-sher/stream-launcher',
+        githubRepo: 'Bagerca/New-vijet-launcher',
         widgets: {}
       },
       updateInfo: {
         hasUpdate: false,
+        isChecking: false,
         currentVersion: '1.0.0',
         latestVersion: '1.0.0',
         releaseNotes: '',

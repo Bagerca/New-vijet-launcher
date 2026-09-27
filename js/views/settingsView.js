@@ -5,51 +5,19 @@ export const SettingsView = {
   _saveTwitchHandler: null,
   _browseObsHandler: null,
   _exportLayoutHandler: null,
-  _checkUpdateHandler: null,
   _saveRepoHandler: null,
 
   render: (state) => {
     const twitchChannel = state.config.twitchChannel || '';
     const obsPath = state.config.obsPath || '';
-    const githubRepo = state.config.githubRepo || 'ksusha-sher/stream-launcher';
+    const githubRepo = state.config.githubRepo || 'Bagerca/New-vijet-launcher';
     const isEnvOK = state.isElectronEnv;
-    const upd = state.updateInfo;
 
     return `
       <header class="view-header">
         <h1 class="view-title">Настройки ядра</h1>
-        <p class="view-subtitle">Системные параметры, интеграции и центр обновлений.</p>
+        <p class="view-subtitle">Системные параметры и интеграции.</p>
       </header>
-
-      <!-- Центр обновлений -->
-      <section class="card mb-md">
-        <header class="mb-md border-bottom pb-md">
-          <div class="d-flex justify-between align-center">
-            <div>
-              <h3 class="text-lg mb-xs d-flex align-center gap-sm">🔄 Обновление виджетов и оверлеев</h3>
-              <p class="text-secondary text-sm">Горячее скачивание новых кодов виджетов с сохранением ваших настроек.</p>
-            </div>
-            <span class="badge ${upd.hasUpdate ? 'badge-update' : 'badge-success'}">
-              v${escapeHtml(upd.currentVersion)}
-            </span>
-          </div>
-        </header>
-
-        <div class="mb-md">
-          <label class="text-muted text-sm text-bold mb-xs" style="display:block;">РЕПОЗИТОРИЙ GITHUB (owner/repo)</label>
-          <div class="input-row">
-            <input type="text" id="repo-input" class="text-input" value="${escapeHtml(githubRepo)}" placeholder="ksusha-sher/stream-launcher" />
-            <button id="btn-save-repo" class="btn btn-secondary">Сохранить</button>
-            <button id="btn-check-update" class="btn btn-primary" ${!isEnvOK ? 'disabled' : ''}>
-              Проверить обновления
-            </button>
-          </div>
-        </div>
-
-        <div id="update-status-msg" class="text-sm text-secondary">
-          ${upd.hasUpdate ? `Доступна новая версия: <strong>${escapeHtml(upd.latestVersion)}</strong>! Вернитесь на Дашборд для установки.` : 'Установлена последняя версия виджетов.'}
-        </div>
-      </section>
 
       <!-- Twitch -->
       <section class="card mb-md">
@@ -61,6 +29,18 @@ export const SettingsView = {
           <input type="text" id="twitch-input" class="text-input" value="${escapeHtml(twitchChannel)}" placeholder="Например: ksusha__sher" />
           <button id="btn-save-twitch" class="btn btn-primary" type="button">Сохранить</button>
         </form>
+      </section>
+
+      <!-- Настройки обновлений -->
+      <section class="card mb-md">
+        <header class="mb-md border-bottom pb-md">
+          <h3 class="text-lg mb-xs d-flex align-center gap-sm">🔄 Сервер обновлений</h3>
+          <p class="text-secondary text-sm">Репозиторий, откуда лаунчер скачивает новые виджеты. Сама проверка и установка находится на вкладке Дашборда.</p>
+        </header>
+        <div class="input-row">
+          <input type="text" id="repo-input" class="text-input" value="${escapeHtml(githubRepo)}" placeholder="Bagerca/New-vijet-launcher" />
+          <button id="btn-save-repo" class="btn btn-secondary">Изменить</button>
+        </div>
       </section>
 
       <!-- OBS Path -->
@@ -96,10 +76,8 @@ export const SettingsView = {
     const btnBrowse = document.getElementById('btn-browse');
     const inputObs = document.getElementById('obs-path-input');
     const btnExportLayout = document.getElementById('btn-export-layout');
-    const btnCheckUpdate = document.getElementById('btn-check-update');
     const btnSaveRepo = document.getElementById('btn-save-repo');
     const inputRepo = document.getElementById('repo-input');
-    const statusMsg = document.getElementById('update-status-msg');
 
     SettingsView._saveTwitchHandler = () => {
       const channel = inputTwitch.value.trim();
@@ -137,33 +115,10 @@ export const SettingsView = {
       btnExportLayout.disabled = false;
     };
 
-    SettingsView._checkUpdateHandler = async () => {
-      if (!state.isElectronEnv) return;
-      btnCheckUpdate.disabled = true;
-      statusMsg.textContent = 'Проверка обновлений на GitHub...';
-      
-      try {
-        const info = await window.obsAPI.checkForUpdates();
-        store.setUpdateInfo(info);
-        if (info.hasUpdate) {
-          statusMsg.innerHTML = `<span style="color: var(--accent-secondary)">Доступна версия ${info.latestVersion}! Вернитесь на Дашборд для установки.</span>`;
-          store.addLog(`Найдено обновление: v${info.latestVersion}`, 'info');
-        } else {
-          statusMsg.textContent = `У вас актуальная версия (${info.currentVersion}).`;
-          store.addLog('Обновлений не найдено. Установлена последняя версия.', 'success');
-        }
-      } catch (e) {
-        statusMsg.textContent = `Ошибка проверки: ${e.message}`;
-      } finally {
-        btnCheckUpdate.disabled = false;
-      }
-    };
-
     if (btnSaveTwitch && inputTwitch) btnSaveTwitch.addEventListener('click', SettingsView._saveTwitchHandler);
     if (btnSaveRepo && inputRepo) btnSaveRepo.addEventListener('click', SettingsView._saveRepoHandler);
     if (btnBrowse) btnBrowse.addEventListener('click', SettingsView._browseObsHandler);
     if (btnExportLayout) btnExportLayout.addEventListener('click', SettingsView._exportLayoutHandler);
-    if (btnCheckUpdate) btnCheckUpdate.addEventListener('click', SettingsView._checkUpdateHandler);
   },
 
   unmount: () => {
@@ -171,13 +126,11 @@ export const SettingsView = {
     const btnSaveRepo = document.getElementById('btn-save-repo');
     const btnBrowse = document.getElementById('btn-browse');
     const btnExportLayout = document.getElementById('btn-export-layout');
-    const btnCheckUpdate = document.getElementById('btn-check-update');
 
     if (btnSaveTwitch && SettingsView._saveTwitchHandler) btnSaveTwitch.removeEventListener('click', SettingsView._saveTwitchHandler);
     if (btnSaveRepo && SettingsView._saveRepoHandler) btnSaveRepo.removeEventListener('click', SettingsView._saveRepoHandler);
     if (btnBrowse && SettingsView._browseObsHandler) btnBrowse.removeEventListener('click', SettingsView._browseObsHandler);
     if (btnExportLayout && SettingsView._exportLayoutHandler) btnExportLayout.removeEventListener('click', SettingsView._exportLayoutHandler);
-    if (btnCheckUpdate && SettingsView._checkUpdateHandler) btnCheckUpdate.removeEventListener('click', SettingsView._checkUpdateHandler);
   }
 };
 

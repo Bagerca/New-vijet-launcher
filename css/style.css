@@ -52,7 +52,7 @@ body {
 }
 .badge-success { background-color: var(--color-success-dim); color: var(--color-success); border: 1px solid var(--color-success-dim); box-shadow: 0 0 10px var(--accent-glow); }
 .badge-danger { background-color: var(--color-danger-dim); color: var(--color-danger); border: 1px solid var(--color-danger-dim); }
-.badge-update { background-color: var(--accent-secondary-dim); color: var(--accent-secondary); border: 1px solid var(--accent-secondary); font-size: 11px; padding: 2px 6px; animation: updatePulse 2s infinite; }
+.badge-update { background-color: var(--accent-secondary-dim); color: var(--accent-secondary); border: 1px solid var(--accent-secondary); font-size: 11px; padding: 2px 8px; animation: updatePulse 2s infinite; }
 
 @keyframes updatePulse {
   0% { transform: scale(1); box-shadow: 0 0 0 0 var(--accent-secondary-glow); }
@@ -60,42 +60,48 @@ body {
   100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
 }
 
-/* === Баннер обновлений на дашборде === */
-.update-banner {
-  background: linear-gradient(135deg, rgba(255, 0, 127, 0.12) 0%, rgba(16, 18, 24, 0.95) 100%);
-  border: 1px solid var(--accent-secondary);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  margin-bottom: var(--space-md);
+/* === Центр обновлений (Стильная карточка) === */
+.update-center-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.2) 100%);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+.update-center-card.has-update {
+  background: linear-gradient(135deg, rgba(255, 0, 127, 0.1) 0%, rgba(16, 18, 24, 0.95) 100%);
+  border-color: var(--accent-secondary);
   box-shadow: 0 8px 32px var(--accent-secondary-glow);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
 }
-.update-banner::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; width: 4px; height: 100%;
-  background: var(--accent-secondary);
-  box-shadow: 0 0 10px var(--accent-secondary);
+.update-center-card.has-update::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+  background: var(--accent-secondary); box-shadow: 0 0 15px var(--accent-secondary);
 }
+.update-icon-wrapper {
+  width: 50px; height: 50px; border-radius: 14px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-primary); transition: all 0.3s ease;
+}
+.update-center-card.has-update .update-icon-wrapper {
+  background: var(--accent-secondary-dim); color: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+  animation: iconLevitate 2s infinite alternate ease-in-out;
+}
+@keyframes iconLevitate {
+  0% { transform: translateY(0); box-shadow: 0 0 10px var(--accent-secondary-glow); }
+  100% { transform: translateY(-3px); box-shadow: 0 5px 20px var(--accent-secondary-glow); }
+}
+
 .update-progress-bar {
-  width: 100%;
-  height: 8px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: 10px;
+  width: 100%; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden; margin-top: 15px;
 }
 .update-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-  width: 0%;
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px var(--accent-glow);
+  height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  width: 0%; transition: width 0.3s ease; box-shadow: 0 0 10px var(--accent-glow);
 }
+.spin-anim { animation: spinIcon 1s linear infinite; }
+@keyframes spinIcon { 100% { transform: rotate(360deg); } }
 
 /* === Скроллбары === */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

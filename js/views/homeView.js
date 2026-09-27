@@ -5,6 +5,10 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
 }
 
+// Inline SVG для иконок обновления
+const syncIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>`;
+const boxIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
+
 export const HomeView = {
   _unsubStore: null,
   _renderedLogsCount: 0,
@@ -12,6 +16,7 @@ export const HomeView = {
   _filterHandler: null,
   _clearHandler: null,
   _updateBtnHandler: null,
+  _checkUpdateHandler: null,
 
   render: (state) => {
     HomeView._renderedLogsCount = state.logs.length;
@@ -23,33 +28,7 @@ export const HomeView = {
     const obsIcon = state.obsStatus === 'connected' ? icons.obs() : icons.power();
 
     const upd = state.updateInfo;
-    let updateBannerHtml = '';
-
-    if (upd.hasUpdate) {
-      updateBannerHtml = `
-        <div class="update-banner">
-          <div>
-            <div class="d-flex align-center gap-sm mb-xs">
-              <span class="badge badge-update">ДОСТУПНО ОБНОВЛЕНИЕ</span>
-              <strong style="color: #fff; font-size: 16px;">Версия ${escapeHtml(upd.latestVersion)}</strong>
-              <span class="text-muted text-sm">(текущая: ${escapeHtml(upd.currentVersion)})</span>
-            </div>
-            <p class="text-secondary text-sm" style="max-width: 600px; line-height: 1.4;">
-              ${escapeHtml(upd.releaseNotes || 'Улучшения виджетов и исправление ошибок.')}
-            </p>
-            ${upd.isUpdating ? `
-              <div class="update-progress-bar">
-                <div class="update-progress-fill" style="width: ${upd.progressPercent}%;"></div>
-              </div>
-              <div class="text-muted text-sm mt-xs">${escapeHtml(upd.statusText)}</div>
-            ` : ''}
-          </div>
-          <button id="btn-apply-update" class="btn btn-accent" ${upd.isUpdating ? 'disabled' : ''}>
-            ${upd.isUpdating ? 'Обновление...' : '⚡ Обновить виджеты'}
-          </button>
-        </div>
-      `;
-    }
+    const isEnvOK = state.isElectronEnv;
 
     return `
       <header class="view-header">
@@ -57,7 +36,46 @@ export const HomeView = {
         <p class="view-subtitle">Мониторинг систем, оверлеев и управление сценами.</p>
       </header>
 
-      ${updateBannerHtml}
+      <!-- ЦЕНТР ОБНОВЛЕНИЙ -->
+      <section class="card mb-md update-center-card ${upd.hasUpdate ? 'has-update' : ''}">
+        <div class="d-flex justify-between align-center">
+          <div class="d-flex align-center gap-md">
+            <div class="update-icon-wrapper">
+              ${upd.hasUpdate ? boxIcon : syncIcon}
+            </div>
+            <div>
+              <h3 class="text-lg text-bold mb-xs d-flex align-center gap-sm">
+                Сборка виджетов: v${escapeHtml(upd.currentVersion)}
+                ${upd.hasUpdate ? `<span class="badge badge-update">Доступна v${escapeHtml(upd.latestVersion)}</span>` : `<span class="badge badge-success">Актуально</span>`}
+              </h3>
+              <p class="text-secondary text-sm">
+                ${upd.isChecking ? 'Поиск новых версий на GitHub...' : (upd.hasUpdate ? 'Доступны новые дизайны и исправления ошибок.' : 'У вас установлена самая последняя версия виджетов.')}
+              </p>
+            </div>
+          </div>
+          <div>
+            ${upd.hasUpdate
+              ? `<button id="btn-apply-update" class="btn btn-accent" ${upd.isUpdating ? 'disabled' : ''}>
+                  ${upd.isUpdating ? 'Установка...' : '⚡ Обновить виджеты'}
+                 </button>`
+              : `<button id="btn-check-update" class="btn btn-secondary" ${upd.isChecking || !isEnvOK ? 'disabled' : ''}>
+                  <span class="${upd.isChecking ? 'spin-anim' : ''} d-flex align-center gap-sm">${syncIcon} ${upd.isChecking ? 'Проверка...' : 'Проверить'}</span>
+                 </button>`
+            }
+          </div>
+        </div>
+        ${upd.hasUpdate ? `
+          <div class="update-details mt-md pt-md" style="border-top: 1px solid rgba(255,255,255,0.1);">
+            <p class="text-secondary text-sm mb-sm"><strong style="color: #fff;">Что нового:</strong> ${escapeHtml(upd.releaseNotes || 'Улучшения производительности')}</p>
+            ${upd.isUpdating ? `
+              <div class="update-progress-bar">
+                <div class="update-progress-fill" style="width: ${upd.progressPercent}%;"></div>
+              </div>
+              <div class="text-muted text-sm mt-xs text-right">${escapeHtml(upd.statusText)}</div>
+            ` : ''}
+          </div>
+        ` : ''}
+      </section>
       
       <!-- Статус-панели -->
       <div class="d-flex gap-md mb-md flex-wrap">
@@ -122,6 +140,7 @@ export const HomeView = {
     const logFilter = document.getElementById('log-filter');
     const btnClearLogs = document.getElementById('btn-clear-logs');
     const btnApplyUpdate = document.getElementById('btn-apply-update');
+    const btnCheckUpdate = document.getElementById('btn-check-update');
     
     if (terminalBox) terminalBox.scrollTop = terminalBox.scrollHeight;
 
@@ -157,6 +176,27 @@ export const HomeView = {
     };
     if (btnSetup && state.isElectronEnv) btnSetup.addEventListener('click', HomeView._setupHandler);
 
+    HomeView._checkUpdateHandler = async () => {
+      if (!state.isElectronEnv) return;
+      store.setUpdateInfo({ isChecking: true });
+      store.addLog('Поиск новых версий на GitHub...', 'info');
+      
+      try {
+        const info = await window.obsAPI.checkForUpdates();
+        store.setUpdateInfo({ ...info, isChecking: false });
+        
+        if (info.hasUpdate) {
+          store.addLog(`Найдено обновление: v${info.latestVersion}!`, 'success');
+        } else {
+          store.addLog('Установлена самая актуальная версия виджетов.', 'success');
+        }
+      } catch (e) {
+        store.setUpdateInfo({ isChecking: false });
+        store.addLog(`Ошибка проверки обновлений: ${e.message}`, 'error');
+      }
+    };
+    if (btnCheckUpdate) btnCheckUpdate.addEventListener('click', HomeView._checkUpdateHandler);
+
     HomeView._updateBtnHandler = async () => {
       const upd = store.getState().updateInfo;
       if (!upd.downloadUrl || !state.isElectronEnv) return;
@@ -170,7 +210,6 @@ export const HomeView = {
           store.addLog('Пакет виджетов успешно обновлен!', 'success');
           store.setUpdateInfo({ hasUpdate: false, isUpdating: false, currentVersion: upd.latestVersion });
           
-          // Обновляем сцены в OBS, чтобы подтянуть новые параметры
           await window.obsAPI.setup(store.getState().config.obsPath);
         } else {
           store.addLog(`Ошибка обновления: ${result.error}`, 'error');
@@ -223,10 +262,12 @@ export const HomeView = {
     const logFilter = document.getElementById('log-filter');
     const btnClearLogs = document.getElementById('btn-clear-logs');
     const btnApplyUpdate = document.getElementById('btn-apply-update');
+    const btnCheckUpdate = document.getElementById('btn-check-update');
     
     if (btnSetup && HomeView._setupHandler) btnSetup.removeEventListener('click', HomeView._setupHandler);
     if (logFilter && HomeView._filterHandler) logFilter.removeEventListener('change', HomeView._filterHandler);
     if (btnClearLogs && HomeView._clearHandler) btnClearLogs.removeEventListener('click', HomeView._clearHandler);
     if (btnApplyUpdate && HomeView._updateBtnHandler) btnApplyUpdate.removeEventListener('click', HomeView._updateBtnHandler);
+    if (btnCheckUpdate && HomeView._checkUpdateHandler) btnCheckUpdate.removeEventListener('click', HomeView._checkUpdateHandler);
   }
 };

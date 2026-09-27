@@ -12,7 +12,8 @@ function getConfig() {
   } catch (e) {
     console.error('[CONFIG] Ошибка чтения конфига:', e);
   }
-  return { obsPath: '', twitchChannel: 'ksusha__sher', githubRepo: 'ksusha-sher/stream-launcher', widgets: {} };
+  // Вписали твой репозиторий по умолчанию
+  return { obsPath: '', twitchChannel: 'ksusha__sher', githubRepo: 'Bagerca/New-vijet-launcher', widgets: {} };
 }
 
 function saveConfig(newConfig) {
