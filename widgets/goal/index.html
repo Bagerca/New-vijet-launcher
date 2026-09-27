@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Standalone Goal Widget</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div id="goal-container">
+    <div class="goal-light-glass">
+      <div class="goal-track">
+        <div class="goal-fill" id="goal-bar-fill"></div>
+      </div>
+      
+      <div class="goal-content">
+        <div class="goal-label">
+          <div class="goal-icon" id="goal-icon">
+            <!-- Icon will be injected via JS -->
+          </div>
+          <span id="goal-title-el">ФОЛЛОВЕРЫ:</span>
+        </div>
+        
+        <div class="goal-stats">
+          <span class="goal-current" id="goal-current">0</span>
+          <span class="goal-divider">/</span>
+          <span class="goal-max" id="goal-max">200</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

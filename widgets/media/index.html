@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Media Info Widget</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div id="media-info-container" class="hidden">
+    <!-- Выпирающий постер -->
+    <div class="mi-poster-breakout">
+        <img id="mi-cover" src="" alt="Cover" class="hidden">
+        <div id="mi-yt-play" style="display: none;">
+            <!-- Иконка инжектится через JS -->
+        </div>
+        <div id="mi-no-media">
+            <div id="mi-no-icon-slot"></div>
+            <div class="mi-no-text">NO SIGNAL</div>
+        </div>
+    </div>
+    
+    <!-- Текстовый контент -->
+    <div class="mi-content">
+        <div class="mi-header-badge" id="mi-type-badge">СЕЙЧАС НА СТРИМЕ</div>
+        <div class="mi-title-wrapper" id="mi-title-wrapper">
+            <div class="mi-title" id="mi-title">Неизвестно</div>
+        </div>
+        <div class="mi-meta-row" id="mi-meta-row"></div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

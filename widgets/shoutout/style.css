@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap');
+
+body {
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* ================= SHOUTOUT (СВЕТЛЫЙ) ================= */
+#shoutout-container { 
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%); 
+    z-index: 100; 
+    min-width: 500px; 
+    pointer-events: none; 
+}
+
+#shoutout-container.hidden { display: none; }
+
+.so-card { 
+    position: relative; 
+    display: flex; align-items: center; gap: 35px; 
+    padding: 35px 45px 35px 35px; 
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 250, 0.85) 100%); 
+    backdrop-filter: blur(24px); 
+    border-radius: 28px; 
+    border: 1px solid rgba(255, 255, 255, 1); 
+    border-top: 2px solid var(--user-color, #ff4d85); 
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1), 0 10px 30px var(--user-glow, rgba(255, 77, 133, 0.3)); 
+    overflow: hidden; 
+}
+
+.so-shine { 
+    position: absolute; top: 0; left: -150%; 
+    width: 50%; height: 100%; 
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); 
+    transform: skewX(-25deg); 
+    animation: shineSweep 6s infinite; 
+}
+
+@keyframes shineSweep { 
+    0% { left: -150%; } 
+    20%, 100% { left: 200%; } 
+}
+
+.so-left { flex-shrink: 0; }
+
+.so-avatar-wrapper { 
+    position: relative; 
+    width: 140px; height: 140px; 
+    border-radius: 30%; padding: 6px; 
+    background: linear-gradient(135deg, rgba(0,0,0,0.05), rgba(0,0,0,0.1)); 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+}
+
+.so-avatar { 
+    width: 100%; height: 100%; 
+    border-radius: 28%; object-fit: cover; background: #fff; 
+}
+
+.so-avatar-ring { 
+    position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; 
+    border-radius: 32%; 
+    border: 3px solid var(--user-color, #ff4d85); 
+    filter: blur(4px); opacity: 0.6; z-index: -1; 
+    animation: ringPulse 2s infinite alternate ease-in-out; 
+}
+
+@keyframes ringPulse { 
+    0% { transform: scale(1); opacity: 0.4; } 
+    100% { transform: scale(1.05); opacity: 0.8; } 
+}
+
+.so-right { display: flex; flex-direction: column; justify-content: center; }
+
+.so-badge { 
+    display: inline-flex; align-items: center; gap: 8px; 
+    font-family: monospace; font-size: 11px; font-weight: 800; 
+    color: rgba(0, 0, 0, 0.5); margin-bottom: 8px; 
+    letter-spacing: 1px; text-transform: uppercase; 
+}
+
+.so-dot { 
+    width: 8px; height: 8px; background-color: #FF0050; border-radius: 50%; 
+    box-shadow: 0 0 10px #FF0050; animation: recPulse 1s infinite alternate; 
+}
+
+@keyframes recPulse { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+
+.so-name { 
+    font-size: 46px; font-weight: 900; line-height: 1; 
+    text-transform: uppercase; margin-bottom: 12px; 
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25)); 
+}
+
+.so-meta { display: flex; gap: 15px; margin-bottom: 20px; }
+
+.so-meta-item { 
+    background: rgba(0, 0, 0, 0.05); padding: 6px 12px; 
+    border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.05); 
+    font-size: 13px; font-weight: 700; color: #1a1a1a; 
+}
+
+.so-url { font-family: monospace; font-size: 16px; color: rgba(0, 0, 0, 0.5); font-weight: 600;}
+.so-url span { color: #1a1a1a; font-weight: 800; font-size: 18px; }
+
+/* Каскадная анимация вылета */
+.shoutout-in .so-card { animation: cardEnter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.shoutout-in .so-avatar-wrapper { opacity: 0; animation: popUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards; }
+.shoutout-in .so-badge { opacity: 0; animation: slideUpFade 0.5s ease-out 0.3s forwards; }
+.shoutout-in .so-name { opacity: 0; animation: slideUpFade 0.5s ease-out 0.4s forwards; }
+.shoutout-in .so-meta { opacity: 0; animation: slideUpFade 0.5s ease-out 0.5s forwards; }
+.shoutout-in .so-url { opacity: 0; animation: slideUpFade 0.5s ease-out 0.6s forwards; }
+
+@keyframes cardEnter { 
+    0% { opacity: 0; transform: scale(0.95) translateY(20px); filter: blur(10px); } 
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } 
+}
+
+@keyframes popUp { 
+    0% { opacity: 0; transform: scale(0.5) rotate(-15deg); } 
+    100% { opacity: 1; transform: scale(1) rotate(0deg); } 
+}
+
+@keyframes slideUpFade { 
+    0% { opacity: 0; transform: translateY(15px); } 
+    100% { opacity: 1; transform: translateY(0); } 
+}
+
+.shoutout-out .so-card { animation: cardExit 0.6s cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+
+@keyframes cardExit { 
+    0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } 
+    40% { transform: scale(1.02) translateY(-5px); } 
+    100% { opacity: 0; transform: scale(0.9) translateY(40px); filter: blur(10px); } 
+}

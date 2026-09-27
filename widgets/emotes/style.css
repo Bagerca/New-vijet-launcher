@@ -1,0 +1,83 @@
+body {
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+}
+
+#emotes-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 80;
+    overflow: hidden;
+}
+
+/* ================= РЕЖИМ А: ПУЗЫРИ (BUBBLE) ================= */
+.emote-bubble {
+    position: absolute;
+    bottom: -100px;
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: floatUp var(--e-dur) linear forwards;
+}
+
+.emote-bubble img {
+    height: 40px;
+    filter: blur(var(--e-blur)) drop-shadow(0 5px 15px rgba(0,0,0,0.2));
+    transform: scale(var(--e-scale));
+    transform-origin: center;
+    will-change: transform;
+    animation: sway 4s ease-in-out infinite alternate;
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(50px); opacity: 0; }
+    5% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { transform: translateY(-110vh); opacity: 0; }
+}
+
+@keyframes sway {
+    0% { transform: scale(var(--e-scale)) translateX(calc(-25px * var(--e-dir))) rotate(calc(-15deg * var(--e-dir))); }
+    100% { transform: scale(var(--e-scale)) translateX(calc(25px * var(--e-dir))) rotate(calc(15deg * var(--e-dir))); }
+}
+
+/* ================= РЕЖИМ Б: ФОНТАН (FOUNTAIN) ================= */
+.emote-fountain-x {
+    position: absolute;
+    bottom: -20px; 
+    opacity: 0; 
+    will-change: transform, opacity;
+    animation: fountainX 3s linear forwards;
+}
+
+.emote-fountain-y {
+    height: 45px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    will-change: transform;
+    transform-origin: center;
+    animation: fountainY 3s forwards;
+}
+
+@keyframes fountainX {
+    0% { transform: translateX(0); opacity: 0; }
+    3% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { transform: translateX(var(--f-x)); opacity: 0; }
+}
+
+@keyframes fountainY {
+    0% { 
+        transform: translateY(50px) scale(0.2) rotate(0deg); 
+        animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); 
+    }
+    40% { 
+        transform: translateY(var(--f-y)) scale(var(--f-scale)) rotate(calc(var(--f-rot) * 0.4)); 
+        animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); 
+    }
+    100% { 
+        transform: translateY(20vh) scale(calc(var(--f-scale) * 0.8)) rotate(var(--f-rot)); 
+    }
+}

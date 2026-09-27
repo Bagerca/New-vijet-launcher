@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+
+:root {
+    --blur-rgb: 255, 68, 119; /* #FF4477 по умолчанию */
+}
+
+body {
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* ================= СТИЛЬНЫЙ ПРИВАТНЫЙ РЕЖИМ (100% НЕПРОЗРАЧНЫЙ) ================= */
+#screen-blur-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999999; 
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    background: transparent;
+}
+
+#screen-blur-overlay.blur-active {
+    opacity: 1;
+    pointer-events: all; /* Блокируем случайные клики */
+    
+    /* 100% АБСОЛЮТНО НЕПРОЗРАЧНЫЙ ФОН */
+    background: radial-gradient(circle at center, #1a1a24 0%, #050508 100%);
+}
+
+/* ==============================================
+   АНИМИРОВАННАЯ ЗАЩИТНАЯ СЕТКА И СКАНЕР
+   ============================================== */
+.blur-pattern {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    
+    /* Текстура тактической сетки с использованием CSS-переменной цвета */
+    background-image: 
+        linear-gradient(rgba(var(--blur-rgb), 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--blur-rgb), 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Эффект сканирующей линии (Security Scan) */
+.blur-pattern::after {
+    content: '';
+    position: absolute;
+    top: -20%; left: 0; 
+    width: 100%; height: 30%;
+    background: linear-gradient(to bottom, transparent, rgba(var(--blur-rgb), 0.08), transparent);
+    animation: securityScan 5s linear infinite;
+}
+
+@keyframes securityScan {
+    0% { transform: translateY(-100vh); }
+    100% { transform: translateY(200vh); }
+}
+
+#screen-blur-overlay.blur-active .blur-pattern { opacity: 1; }
+
+/* ==============================================
+   ЦЕНТРАЛЬНАЯ КАРТОЧКА БЛОКИРОВКИ
+   ============================================== */
+.blur-card {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 30px 60px;
+    
+    background: linear-gradient(135deg, #141419 0%, #0a0a0f 100%);
+    
+    border: 1px solid rgba(var(--blur-rgb), 0.3);
+    border-top: 1px solid rgba(var(--blur-rgb), 0.6);
+    border-radius: 24px;
+    
+    box-shadow: 
+        0 40px 80px rgba(0, 0, 0, 0.9), 
+        inset 0 0 40px rgba(var(--blur-rgb), 0.05),
+        0 0 100px rgba(var(--blur-rgb), 0.15);
+    
+    transform: translateY(40px) scale(0.95);
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#screen-blur-overlay.blur-active .blur-card {
+    transform: translateY(0) scale(1);
+}
+
+/* Круг с неоновой иконкой замка */
+.blur-icon-wrapper {
+    width: 72px; height: 72px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(var(--blur-rgb), 0.1);
+    border-radius: 50%;
+    border: 2px solid rgb(var(--blur-rgb));
+    box-shadow: 0 0 30px rgba(var(--blur-rgb), 0.4), inset 0 0 20px rgba(var(--blur-rgb), 0.4);
+    animation: blurLockPulse 2s infinite alternate ease-in-out;
+}
+
+.blur-icon-wrapper svg {
+    width: 36px; height: 36px;
+    color: rgb(var(--blur-rgb));
+    filter: drop-shadow(0 0 8px rgb(var(--blur-rgb)));
+}
+
+/* Текстовая часть */
+.blur-text-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.blur-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(var(--blur-rgb), 0.4);
+}
+
+.blur-subtitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(var(--blur-rgb), 0.9);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+@keyframes blurLockPulse {
+    0% { transform: scale(1); box-shadow: 0 0 20px rgba(var(--blur-rgb), 0.2), inset 0 0 10px rgba(var(--blur-rgb), 0.2); }
+    100% { transform: scale(1.1); box-shadow: 0 0 50px rgba(var(--blur-rgb), 0.7), inset 0 0 30px rgba(var(--blur-rgb), 0.5); }
+}

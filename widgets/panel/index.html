@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Moderator Panel</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <div style="font-weight: 800; font-size: 18px;">Live Panel</div>
+    <div id="status" class="status-badge">Offline</div>
+  </header>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-ws">Live (Прямой WS)</button>
+    <button class="mode-btn" id="btn-chat">Команды Чата</button>
+  </div>
+
+  <div class="container" id="widgets-container"></div>
+  <div class="toast" id="toast">Команда скопирована!</div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

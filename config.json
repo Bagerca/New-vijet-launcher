@@ -1,0 +1,109 @@
+{
+  "obsPath": "",
+  "twitchChannel": "ksusha__sher",
+  "githubRepo": "ksusha-sher/stream-launcher",
+  "widgets": {
+    "frame": {
+      "color1": "#00ff66",
+      "color2": "#ff007f",
+      "isVisible": true
+    },
+    "pet": {
+      "enabled": true,
+      "sleepTimeout": 120,
+      "feedRewardName": "Покормить лису",
+      "vipUsers": "bagercaa, to_be_ang",
+      "forbiddenWords": "даун, пидор, негр"
+    },
+    "alerts": {
+      "volume": 40,
+      "duration": 5
+    },
+    "blur": {
+      "enabled": false,
+      "title": "ПРИВАТНЫЙ РЕЖИМ",
+      "subtitle": "Экран временно скрыт",
+      "accentColor": "#ff4d85"
+    },
+    "particles": {
+      "enabled": true,
+      "count": 35,
+      "distance": 100,
+      "speed": 0.2,
+      "color": "#ff4d85"
+    },
+    "deaths": {
+      "enabled": true,
+      "deathsCount": 4,
+      "color": "#ff0050"
+    },
+    "emotes": {
+      "enabled": true,
+      "mode": "bubble",
+      "maxEmotes": 20
+    },
+    "shoutout": {
+      "duration": 8
+    },
+    "goal": {
+      "goalTarget": 200,
+      "goalTitle": "ФОЛЛОВЕРЫ:",
+      "goalColor": "#ff4d85"
+    },
+    "chat": {
+      "bgColor": "#ffffff",
+      "bgOpacity": 95,
+      "textColor": "#2c2c2e",
+      "fontSize": 15
+    },
+    "player": {
+      "videoUrl": "",
+      "volume": 30
+    },
+    "ticker": {
+      "isActive": true,
+      "speed": 120,
+      "interval": 60,
+      "messages": "<span class='t-highlight'>МУЗЫКА</span> Пиши !play [ссылка] чтобы заказать трек в очередь.\n<span class='t-highlight'>ПРАВИЛА</span> Уважайте друг друга. Токсики отправляются в бан-лист.\n<span class='t-highlight'>TELEGRAM</span> Анонсы и мемы: <span style='color: #fff;'>t.me/pizdeckakoi_to</span>"
+    },
+    "socials": {
+      "isActive": true,
+      "interval": 30,
+      "tgHandle": "t.me/pizdeckakoi_to",
+      "ttHandle": "@_ksusha_sher_",
+      "vkHandle": "vk.com/club236843653"
+    },
+    "media": {
+      "isActive": true,
+      "type": "game",
+      "query": "CS2"
+    },
+    "uptime": {
+      "isActive": true,
+      "testMode": false
+    },
+    "tts": {
+      "enabled": true,
+      "volume": 100,
+      "maxLength": 150,
+      "customVoices": "{\"bagercaa\":{\"pitch\":0.2,\"rate\":0.8}}"
+    },
+    "startscreen": {
+      "text1": "Ало,",
+      "text2": "Здравствуйте,",
+      "text3": "Добрый вечер",
+      "timerMinutes": 5,
+      "accentPink": "#ff4d85",
+      "accentGreen": "#00e676"
+    },
+    "endscreen": {
+      "title": "Спасибо за просмотр!",
+      "subtitle": "Увидимся на следующем стриме 💜",
+      "accentPink": "#ff007f",
+      "accentGreen": "#00ff66",
+      "color1": "#ff6a00",
+      "color2": "#ee0979",
+      "color3": "#6a11cb"
+    }
+  }
+}

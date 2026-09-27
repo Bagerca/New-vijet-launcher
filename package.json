@@ -1,0 +1,17 @@
+{
+  "name": "stream-launcher-poc",
+  "version": "1.0.0",
+  "description": "OBS Auto-Setup Launcher",
+  "main": "main.js",
+  "scripts": {
+    "start": "chcp 65001>nul & electron ."
+  },
+  "dependencies": {
+    "localtunnel": "^2.0.2",
+    "obs-websocket-js": "^5.0.5",
+    "tmi.js": "^1.8.5"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0"
+  }
+}

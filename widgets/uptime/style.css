@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+
+body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    box-sizing: border-box; overflow: hidden; background: transparent;
+    font-family: 'Montserrat', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+}
+
+#uptime-container {
+    position: relative; 
+    height: 42px;
+    width: max-content;
+    z-index: 45;
+    
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.85) 100%);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 1); border-radius: 30px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08), 0 4px 15px rgba(255, 0, 80, 0.1);
+    
+    display: flex; align-items: center; gap: 14px; padding: 6px 20px 6px 6px; 
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); opacity: 1; transform: translateY(0) scale(1);
+}
+
+#uptime-container.hidden { opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; }
+
+.up-live-pill { display: flex; align-items: center; gap: 8px; background: rgba(255, 0, 80, 0.1); border: 1px solid rgba(255, 0, 80, 0.15); padding: 6px 14px 6px 10px; border-radius: 20px; transition: all 0.3s ease; }
+.up-dot { width: 10px; height: 10px; border-radius: 50%; background: #FF0050; box-shadow: 0 0 8px #FF0050; animation: upPulse 1.5s infinite alternate ease-in-out; }
+@keyframes upPulse { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+
+.up-live-text { color: #FF0050; font-size: 12px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+.up-divider { width: 2px; height: 20px; background: rgba(0, 0, 0, 0.1); }
+.up-time { font-size: 20px; font-weight: 900; color: #1a1a1a; font-variant-numeric: tabular-nums; letter-spacing: 1px; }

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Privacy Blur Widget</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div id="screen-blur-overlay">
+    <div class="blur-pattern"></div>
+    <div class="blur-card">
+        <div class="blur-icon-wrapper" id="blur-icon-slot">
+            <!-- Иконка инжектится через JS -->
+        </div>
+        <div class="blur-text-wrapper">
+            <div class="blur-title" id="blur-title-el">ПРИВАТНЫЙ РЕЖИМ</div>
+            <div class="blur-subtitle" id="blur-sub-el">Экран временно скрыт</div>
+        </div>
+    </div>
+  </div>
+
+  <script src="/shared/tmi.min.js"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

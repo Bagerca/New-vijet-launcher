@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Neon Frame & Interactive Pet</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="webcam-container">
+    
+    <!-- ИНТЕРАКТИВНЫЙ ПИТОМЕЦ -->
+    <div id="pet-container" class="state-idle hidden">
+      <div class="tail-pos joint">
+        <div class="tail-anim"><div class="fox-part tail-main"><div class="fox-part tail-tip"></div></div></div>
+      </div>
+      <div class="body-pos joint">
+        <div class="body-anim">
+          <div class="head-shadow"></div>
+          <div class="fox-part leg leg-l"></div><div class="fox-part leg leg-r"></div>
+          <div class="fox-part torso"><div class="fox-part chest"></div></div>
+        </div>
+      </div>
+      <div class="head-pos joint">
+        <div class="head-anim">
+          <div class="fox-part ear ear-l joint"><div class="ear-in"></div></div>
+          <div class="fox-part ear ear-r joint"><div class="ear-in"></div></div>
+          <div class="fox-part face">
+            <div class="fox-part cheek cheek-l"></div><div class="fox-part cheek cheek-r"></div>
+            <div class="jaw-pos joint"><div class="tongue joint"></div></div>
+            <div class="snout-pos"><div class="nose"></div></div>
+            <div class="eyebrow eyebrow-l joint"></div><div class="eyebrow eyebrow-r joint"></div>
+            <div class="eye eye-l joint"></div><div class="eye eye-r joint"></div>
+          </div>
+        </div>
+      </div>
+      <div class="body-pos arms-layer joint">
+        <div class="body-anim">
+          <div class="arm-pos arm-l joint"><div class="arm-part"><div class="arm-paw"></div></div></div>
+          <div class="arm-pos arm-r joint"><div class="arm-part"><div class="arm-paw"></div></div><div class="item-cookie"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- РАМКА -->
+    <div id="webcam-frame"></div>
+  </div>
+  
+  <script src="/shared/tmi.min.js"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart YouTube Widget</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="widget-container" class="hidden">
+    <div id="player-wrapper">
+      <div id="yt-player"></div>
+      <div id="yt-progress-container"><div id="yt-progress-bar"></div></div>
+    </div>
+    
+    <div id="info-bar">
+      <div class="info-left">
+        <div class="info-user-wrap">
+          <img id="requester-avatar" src="" alt="Avatar">
+          <div class="avatar-ring"></div>
+        </div>
+        <div class="info-main">
+          <div class="info-label">СЕЙЧАС ИГРАЕТ ЗАКАЗ</div>
+          <div id="requester-name">Никнейм</div>
+        </div>
+      </div>
+      <div class="info-stats">
+        <div class="stat-badge" title="Громкость">
+          <span id="icon-volume"></span>
+          <span><span id="volume-level">30</span>%</span>
+        </div>
+        <div class="stat-badge stat-queue-badge" title="В очереди">
+          <span id="icon-queue"></span>
+          <span id="queue-count">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="/shared/tmi.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

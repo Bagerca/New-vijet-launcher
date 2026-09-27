@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Clean End Screen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div class="solid-bg"></div>
+
+  <div class="ambient-orbs">
+    <div class="orb orb-pink"></div>
+    <div class="orb orb-green"></div>
+  </div>
+
+  <div class="hud-container">
+    <div class="clean-card main-panel">
+      <div class="status-badge">
+        <span class="pulse-dot red-dot"></span> ТРАНСЛЯЦИЯ ЗАВЕРШЕНА
+      </div>
+      <h1 class="ending-title" id="title-el">
+        А всё,<br>а надо было раньше
+      </h1>
+      <div class="footer-text" id="subtitle-el">
+        Спасибо всем, кто был сегодня на стриме 💜
+      </div>
+    </div>
+
+    <!-- Правая панель, сюда OBS менеджер подставит сам чат -->
+    <div class="clean-card chat-panel">
+      <div class="chat-title">
+        <span class="pulse-dot green-dot"></span> Чат трансляции
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
