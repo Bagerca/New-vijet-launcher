@@ -127,10 +127,8 @@ const defaultLayout = {
 async function setupScenes(sendLog, portHttp) {
   const collectionName = 'New Stream Pack';
   const audioCoreScene = '⚙️ [Ядро] Звуки и Системы';
-  
   const targetScenes = ['🔴 [Сцена] Начало', '🗣 [Сцена] Общение', '🎮 [Сцена] Игра', '👋 [Сцена] Конец'];
 
-  // Компонентные размеры виджетов с "безопасными зонами"
   const widgetsConfig = {
     'Виджет: Рамка вебки': { url: '/frame/index.html', w: 1400, h: 850 },
     'Виджет: Чат Twitch': { url: '/chat/index.html', w: 540, h: 1040 },
@@ -141,8 +139,6 @@ async function setupScenes(sendLog, portHttp) {
     'Виджет: Таймер стрима (Uptime)': { url: '/uptime/index.html', w: 300, h: 100 },
     'Виджет: Счетчик смертей': { url: '/deaths/index.html', w: 250, h: 200 },
     'Виджет: Бегущая строка': { url: '/ticker/index.html', w: 860, h: 120 },
-    
-    // Полноэкранные остаются 1920x1080
     'Виджет: Летящие смайлы': { url: '/emotes/index.html', w: 1920, h: 1080 },
     'Виджет: Неоновые частицы': { url: '/particles/index.html', w: 1920, h: 1080 },
     'Виджет: Реклама (Shoutout)': { url: '/shoutout/index.html', w: 1920, h: 1080 },
@@ -175,6 +171,7 @@ async function setupScenes(sendLog, portHttp) {
       if (!existingSceneNames.includes(sceneName)) await obs.call('CreateScene', { sceneName });
     }
     
+    // 1. Создаем ВСЕ источники временно в сцене Ядра (чтобы OBS их не удалил)
     for (const [sourceName, config] of Object.entries(widgetsConfig)) {
       const url = `http://localhost:${portHttp}${config.url}?nocache=${Date.now()}`;
       const { inputs } = await obs.call('GetInputList');
@@ -182,7 +179,7 @@ async function setupScenes(sendLog, portHttp) {
       
       if (!exists) {
         await obs.call('CreateInput', {
-          sceneName: targetScenes[0], 
+          sceneName: audioCoreScene, // <--- ИСПРАВЛЕНИЕ ТУТ
           inputName: sourceName,
           inputKind: 'browser_source',
           inputSettings: { 
@@ -196,8 +193,7 @@ async function setupScenes(sendLog, portHttp) {
       }
     }
     
-    for (const w of Object.keys(widgetsConfig)) await removeIfPresent(audioCoreScene, w);
-
+    // 2. Распределяем по целевым сценам
     for (const sceneName of targetScenes) {
       await enforceSingleItem(sceneName, audioCoreScene);
 
@@ -225,6 +221,7 @@ async function setupScenes(sendLog, portHttp) {
         });
       }
 
+      // Удаляем лишнее из текущей сцены
       for (const widgetName of Object.keys(widgetsConfig)) {
         if (!layoutWidgetNames.includes(widgetName)) {
           await removeIfPresent(sceneName, widgetName);
@@ -232,7 +229,12 @@ async function setupScenes(sendLog, portHttp) {
       }
     }
 
-    sendLog('✅ Сцены перестроены под компонентные размеры!', 'success');
+    // 3. Только ТЕПЕРЬ очищаем временное хранилище (Ядро)
+    for (const w of Object.keys(widgetsConfig)) {
+        await removeIfPresent(audioCoreScene, w);
+    }
+
+    sendLog('✅ Сцены успешно построены!', 'success');
   } catch (error) {
     sendLog(`Ошибка настройки: ${error.message}`, 'error');
   }
