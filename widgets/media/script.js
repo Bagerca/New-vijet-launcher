@@ -1,5 +1,7 @@
-import { GamesDatabase } from './games-db.js';
-import { icons } from '/js/utils/icons.js';
+/* ФАЙЛ: widgets/media/script.js */
+
+import { MediaLibrary } from './media-db.js';
+import { icons } from '../../js/utils/icons.js';
 
 const AppMediaInfo = {
     container: document.getElementById('media-info-container'),
@@ -14,15 +16,14 @@ const AppMediaInfo = {
     titleEl: document.getElementById('mi-title'),
     metaRowEl: document.getElementById('mi-meta-row'),
 
-    currentQuery: null,
-    currentType: null,
+    currentLibId: null,
+    currentYtLink: null,
 
     init: function() {
         this.ytPlayEl.innerHTML = icons.play();
         this.noIconSlot.innerHTML = icons.noSignal();
         
-        // Автономный фоллбэк: загрузка конфига и прослушивание storage
-        fetch('/api/config')
+        fetch('http://localhost:42069/api/config')
           .then(res => res.json())
           .then(config => this.applyConfig(config.widgets?.media || {}))
           .catch(() => {
@@ -60,37 +61,38 @@ const AppMediaInfo = {
         const isOff = config.isActive === false || String(config.isActive) === 'false';
         if (isOff) {
             this.hide();
-            this.currentQuery = null;
+            this.currentLibId = null;
+            this.currentYtLink = null;
             return;
         }
 
-        if (config.query !== this.currentQuery || config.type !== this.currentType) {
-            this.currentQuery = config.query;
-            this.currentType = config.type;
-            this.set(config.type, config.query);
+        if (config.libId !== this.currentLibId || config.ytLink !== this.currentYtLink) {
+            this.currentLibId = config.libId;
+            this.currentYtLink = config.ytLink;
+            this.set(config.libId, config.ytLink);
         } else if (this.container.classList.contains('hidden')) {
             this.container.classList.remove('hidden');
         }
     },
 
-    set: async function(type, query) {
-        if (!this.container || !query) {
+    set: async function(libId, ytLink) {
+        if (!this.container) {
             this.hide(); 
             return;
         }
 
         let mediaData = null;
 
-        if (type === 'game') {
-            const gameKey = query.toLowerCase().trim();
-            mediaData = this.findLocalGame(gameKey);
-            if (!mediaData) mediaData = await this.fetchFromSteam(gameKey);
-        }
-        else if (type === 'yt') {
-            mediaData = await this.fetchFromYouTube(query);
+        if (ytLink && (ytLink.includes('youtu.be') || ytLink.includes('youtube.com'))) {
+            mediaData = await this.fetchFromYouTube(ytLink);
             if (!mediaData) {
-                // Фоллбэк, если ссылка кривая или нет API доступа
                 mediaData = { title: "YouTube Video", cover: "generated", themeColor: "#FF0000", type: "youtube", meta: ["Видео загружается..."] };
+            }
+        } 
+        else if (libId) {
+            mediaData = MediaLibrary[libId.toLowerCase()];
+            if (!mediaData) {
+                mediaData = { title: libId.toUpperCase(), cover: "generated", themeColor: "#ff007f", type: "game", meta: ["Неизвестно"] };
             }
         }
 
@@ -103,6 +105,8 @@ const AppMediaInfo = {
             this.container.classList.add('pop-anim');
 
             setTimeout(() => this.checkMarquee(), 100);
+        } else {
+            this.hide();
         }
     },
 
@@ -112,37 +116,6 @@ const AppMediaInfo = {
         } else {
             this.titleEl.classList.remove('marquee-active');
         }
-    },
-
-    findLocalGame: function(searchKey) {
-        if (GamesDatabase[searchKey]) return GamesDatabase[searchKey]; 
-        for (let key in GamesDatabase) {
-            if (key.includes(searchKey) || searchKey.includes(key)) return GamesDatabase[key];
-        }
-        return null; 
-    },
-
-    fetchFromSteam: async function(gameName) {
-        try {
-            const encodedTerm = encodeURIComponent(gameName);
-            const url = encodeURIComponent(`https://store.steampowered.com/api/storesearch/?term=${encodedTerm}&l=russian&cc=RU`);
-            const response = await fetch(`https://api.allorigins.win/get?url=${url}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                const steamData = JSON.parse(data.contents);
-                
-                if (steamData && steamData.items && steamData.items.length > 0) {
-                    const game = steamData.items[0]; 
-                    const coverUrl = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.id}/library_600x900_2x.jpg`;
-                    return { 
-                        title: game.name, cover: coverUrl, themeColor: "#00ff66", type: "game", 
-                        meta: ["Steam", "PC"]
-                    };
-                }
-            }
-        } catch (err) {}
-        return { title: gameName.toUpperCase(), cover: "generated", themeColor: "#ff007f", type: "game", meta: ["Пользовательская игра"] };
     },
 
     fetchFromYouTube: async function(urlOrId) {

@@ -1,9 +1,8 @@
-import { widgetsManifest } from '/data/widgetsManifest.js';
-import { AvatarManager } from '/shared/AvatarManager.js';
+/* ФАЙЛ: widgets/chat/script.js */
 
-/* ====================================================================
-   ДВИЖОК РЕНДЕРА ЧАТА (Grid Architecture)
-   ==================================================================== */
+import { widgetsManifest } from '../../data/widgetsManifest.js';
+import { AvatarManager } from '../shared/AvatarManager.js';
+
 const AppChat = {
   container: document.getElementById('chat-messages'),
   maxMessages: 15,
@@ -85,9 +84,6 @@ const AppChat = {
   }
 };
 
-/* ====================================================================
-   TWITCH И ИНТЕГРАЦИЯ (Сборка сообщения)
-   ==================================================================== */
 let currentClient = null, currentChannel = null, globalConfig = null, ws = null;
 const commandMap = {};
 
@@ -95,8 +91,6 @@ widgetsManifest.forEach(w => w.controls.forEach(c => {
   if (c.cmd) commandMap[c.cmd.toLowerCase()] = { widgetId: w.id, key: c.key }; 
 }));
 
-// Конвертер из HEX (#ffffff) + Opacity (0-100) -> в RGBA()
-// Это 100% пуленепробиваемый способ для любых, даже старых версий OBS Studio
 function hexToRgba(hex, opacityPercentage) {
     let h = (hex || '#ffffff').replace('#', '');
     if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -109,11 +103,8 @@ function hexToRgba(hex, opacityPercentage) {
 
 function applyChatStyles(chatConfig) {
   if (!chatConfig) return;
-  
-  // Применяем магию генерации rgba из HEX цвета и ползунка прозрачности
   const finalBgColor = hexToRgba(chatConfig.bgColor, chatConfig.bgOpacity);
   document.documentElement.style.setProperty('--chat-bg-color', finalBgColor);
-  
   if (chatConfig.textColor) document.documentElement.style.setProperty('--chat-text-color', chatConfig.textColor);
   if (chatConfig.fontSize) document.documentElement.style.setProperty('--chat-font-size', `${chatConfig.fontSize}px`);
 }
@@ -154,7 +145,43 @@ async function init() {
         const cmd = args[0].toLowerCase();
         const value = args.slice(1).join(' ');
         
-        if (commandMap[cmd] && value !== '') {
+        // ==== УМНЫЙ ПАРСЕР ДЛЯ ВИДЖЕТА MEDIA ====
+        if (cmd === '!media' || cmd === '!медиа') {
+          const arg = args[1];
+          if (arg) {
+             let newMediaConf = { ...(globalConfig.widgets.media || {}) };
+             let changed = false;
+
+             if (arg === 'on' || arg === 'show') {
+                 newMediaConf.isActive = true;
+                 changed = true;
+             } else if (arg === 'off' || arg === 'hide') {
+                 newMediaConf.isActive = false;
+                 changed = true;
+             } else if (arg.includes('youtu.be') || arg.includes('youtube.com')) {
+                 newMediaConf.isActive = true;
+                 newMediaConf.ytLink = arg; // Вставляем ютуб
+                 changed = true;
+             } else {
+                 newMediaConf.isActive = true;
+                 newMediaConf.libId = arg.toLowerCase();
+                 newMediaConf.ytLink = ""; // ОБЯЗАТЕЛЬНО очищаем ютуб, чтобы показалась библиотека
+                 changed = true;
+             }
+
+             if (changed) {
+                 if (!globalConfig.widgets) globalConfig.widgets = {};
+                 globalConfig.widgets.media = newMediaConf;
+                 if (ws && ws.readyState === WebSocket.OPEN) {
+                     ws.send(JSON.stringify({ event: 'UPDATE_CONFIG', data: globalConfig }));
+                     AppChat.renderSystemMessage(`Карточка медиа обновлена!`);
+                 }
+             }
+          }
+        }
+        // =========================================
+        
+        else if (commandMap[cmd] && value !== '') {
           const { widgetId, key } = commandMap[cmd];
           if (!globalConfig.widgets[widgetId]) globalConfig.widgets[widgetId] = {};
           globalConfig.widgets[widgetId][key] = value;

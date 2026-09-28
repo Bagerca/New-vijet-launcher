@@ -1,8 +1,22 @@
+
+--- START OF FILE .gitattributes ---
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+
+--- START OF FILE .gitignore ---
+
+node_modules/
+.electron-data/
+dist/
+
 --- START OF FILE config.json ---
 
 {
   "obsPath": "",
   "twitchChannel": "ksusha__sher",
+  "githubRepo": "Bagerca/New-vijet-launcher",
   "widgets": {
     "frame": {
       "color1": "#00ff66",
@@ -76,7 +90,9 @@
     },
     "media": {
       "isActive": true,
-      "type": "game",
+      "libId": "mc",
+      "ytLink": "",
+      "type": "lib",
       "query": "CS2"
     },
     "uptime": {
@@ -136,6 +152,7 @@ const fs = require('fs');
 const configManager = require('./backend/configManager');
 const serverManager = require('./backend/serverManager');
 const obsManager = require('./backend/obsManager');
+const updateManager = require('./backend/updateManager');
 
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.setPath('userData', path.join(__dirname, '.electron-data'));
@@ -144,8 +161,10 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: 1080,
+    height: 750,
+    minWidth: 900,
+    minHeight: 650,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -158,7 +177,9 @@ function createWindow() {
 
 function sendLog(message, type = 'info') {
   console.log(`[${type.toUpperCase()}] ${message}`);
-  if (mainWindow) mainWindow.webContents.send('obs-log', { message, type });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('obs-log', { message, type });
+  }
 }
 
 app.whenReady().then(() => {
@@ -166,7 +187,9 @@ app.whenReady().then(() => {
   createWindow();
 
   serverManager.setRemoteUpdateCallback((newConfig) => {
-    if (mainWindow) mainWindow.webContents.send('remote-config-update', newConfig);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('remote-config-update', newConfig);
+    }
   });
 
   app.on('activate', () => { 
@@ -204,7 +227,6 @@ ipcMain.handle('get-local-ip', () => serverManager.getLocalIP());
 ipcMain.handle('toggle-tunnel', async () => await serverManager.toggleTunnel());
 ipcMain.handle('get-tunnel-status', () => serverManager.getTunnelStatus());
 
-// НОВЫЙ МЕТОД ДЛЯ ЭКСПОРТА КООРДИНАТ
 ipcMain.handle('export-layout', async () => {
   const layoutData = await obsManager.exportLayout(sendLog);
   if (!layoutData) return { status: 'error', message: 'Не удалось получить данные из OBS' };
@@ -225,15 +247,32 @@ ipcMain.handle('export-layout', async () => {
   }
 });
 
+// === IPC ОБРАБОТЧИКИ ОБНОВЛЕНИЯ ===
+ipcMain.handle('check-updates', async () => {
+  const conf = configManager.getConfig();
+  const repo = conf.githubRepo || null;
+  return await updateManager.checkForUpdates(repo);
+});
+
+ipcMain.handle('start-update', async (event, downloadUrl) => {
+  return await updateManager.performUpdate(downloadUrl, (status) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-progress', status);
+    }
+  });
+});
+
 --- START OF FILE package.json ---
 
 {
-  "name": "stream-launcher-poc",
+  "name": "stream-launcher",
+  "productName": "Stream Pack Launcher",
   "version": "1.0.0",
   "description": "OBS Auto-Setup Launcher",
   "main": "main.js",
   "scripts": {
-    "start": "chcp 65001>nul & electron ."
+    "start": "chcp 65001>nul & electron .",
+    "build": "electron-builder --win"
   },
   "dependencies": {
     "localtunnel": "^2.0.2",
@@ -241,7 +280,24 @@ ipcMain.handle('export-layout', async () => {
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
-    "electron": "^29.0.0"
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bagerca.streamlauncher",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true
+    }
   }
 }
 
@@ -259,8 +315,12 @@ contextBridge.exposeInMainWorld('obsAPI', {
   toggleTunnel: () => ipcRenderer.invoke('toggle-tunnel'),
   getTunnelStatus: () => ipcRenderer.invoke('get-tunnel-status'),
 
-  // Экспорт координат
   exportLayout: () => ipcRenderer.invoke('export-layout'),
+
+  // Обновления
+  checkForUpdates: () => ipcRenderer.invoke('check-updates'),
+  startUpdate: (downloadUrl) => ipcRenderer.invoke('start-update', downloadUrl),
+  onUpdateProgress: (callback) => ipcRenderer.on('update-progress', (event, data) => callback(data)),
 
   onLog: (callback) => ipcRenderer.on('obs-log', (event, data) => callback(data)),
   onRemoteConfigUpdate: (callback) => ipcRenderer.on('remote-config-update', (event, config) => callback(config))
@@ -272,12 +332,19 @@ contextBridge.exposeInMainWorld('obsAPI', {
 
 
 
+--- START OF FILE version.json ---
+
+{
+  "version": "1.0.1",
+  "githubRepo": "Bagerca/New-vijet-launcher",
+  "channel": "stable"
+}
+
 --- START OF FILE backend/configManager.js ---
 
 const fs = require('fs');
 const path = require('path');
 
-// Так как мы находимся в папке backend/, выходим на уровень выше (..)
 const configPath = path.join(__dirname, '..', 'config.json');
 
 function getConfig() {
@@ -287,17 +354,17 @@ function getConfig() {
       return JSON.parse(data);
     }
   } catch (e) {
-    console.error('Ошибка чтения конфига:', e);
+    console.error('[CONFIG] Ошибка чтения конфига:', e);
   }
-  // Дефолтный конфиг
-  return { obsPath: '', twitchChannel: 'ksusha__sher', widgets: {} };
+  // Вписали твой репозиторий по умолчанию
+  return { obsPath: '', twitchChannel: 'ksusha__sher', githubRepo: 'Bagerca/New-vijet-launcher', widgets: {} };
 }
 
 function saveConfig(newConfig) {
   try {
     fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
   } catch (e) {
-    console.error('Ошибка сохранения конфига:', e);
+    console.error('[CONFIG] Ошибка сохранения конфига:', e);
   }
 }
 
@@ -307,6 +374,8 @@ module.exports = {
 };
 
 --- START OF FILE backend/obsManager.js ---
+
+/* ФАЙЛ: backend/obsManager.js */
 
 const fs = require('fs');
 const path = require('path');
@@ -339,14 +408,15 @@ function launchOBS(customPath, sendLog) {
     }
 
     if (!obsPath) {
-      sendLog('OBS не найден! Укажите путь вручную.', 'error');
+      sendLog('OBS не найден! Укажите путь вручную в настройках.', 'error');
       return resolve(false);
     }
 
     sendLog(`Запускаем OBS из: ${obsPath}`, 'info');
     const obsProcess = spawn(obsPath, [], { cwd: obsDir, detached: true, stdio: 'ignore' });
     obsProcess.unref(); 
-    setTimeout(() => { resolve(true); }, 5000);
+    
+    setTimeout(() => { resolve(true); }, 2000);
   });
 }
 
@@ -373,7 +443,7 @@ async function removeIfPresent(sceneName, sourceName) {
   }
 }
 
-// ==== ВАШ КАСТОМНЫЙ ЛЕЙАУТ ИЗ OBS ====
+// ==== КАСТОМНЫЙ ЛЕЙАУТ ИЗ OBS ====
 const defaultLayout = {
   "🔴 [Сцена] Начало": {
     "Виджет: Экран Начала": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
@@ -408,7 +478,8 @@ const defaultLayout = {
     "Виджет: Неоновые частицы": { "index": 2, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Заглушка (Blur)": { "index": 3, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Бегущая строка": { "index": 4, "positionX": 535, "positionY": 960, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Чат Twitch": { "index": 5, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7 },
+    // Идеальный вариант: позиция Y приподнята (292), обрезка оставлена (347)
+    "Виджет: Чат Twitch": { "index": 5, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7, "cropTop": 347 },
     "Виджет: Рамка вебки": { "index": 6, "positionX": 0, "positionY": 159, "scaleX": 0.28, "scaleY": 0.28 },
     "Виджет: Счетчик смертей": { "index": 7, "positionX": 259, "positionY": 139, "scaleX": 0.52, "scaleY": 0.52 },
     "Виджет: Медиа Инфо": { "index": 8, "positionX": 0, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
@@ -437,10 +508,8 @@ const defaultLayout = {
 async function setupScenes(sendLog, portHttp) {
   const collectionName = 'New Stream Pack';
   const audioCoreScene = '⚙️ [Ядро] Звуки и Системы';
-  
   const targetScenes = ['🔴 [Сцена] Начало', '🗣 [Сцена] Общение', '🎮 [Сцена] Игра', '👋 [Сцена] Конец'];
 
-  // Компонентные размеры виджетов с "безопасными зонами"
   const widgetsConfig = {
     'Виджет: Рамка вебки': { url: '/frame/index.html', w: 1400, h: 850 },
     'Виджет: Чат Twitch': { url: '/chat/index.html', w: 540, h: 1040 },
@@ -452,7 +521,6 @@ async function setupScenes(sendLog, portHttp) {
     'Виджет: Счетчик смертей': { url: '/deaths/index.html', w: 250, h: 200 },
     'Виджет: Бегущая строка': { url: '/ticker/index.html', w: 860, h: 120 },
     
-    // Полноэкранные остаются 1920x1080
     'Виджет: Летящие смайлы': { url: '/emotes/index.html', w: 1920, h: 1080 },
     'Виджет: Неоновые частицы': { url: '/particles/index.html', w: 1920, h: 1080 },
     'Виджет: Реклама (Shoutout)': { url: '/shoutout/index.html', w: 1920, h: 1080 },
@@ -524,7 +592,11 @@ async function setupScenes(sendLog, portHttp) {
             positionX: transform.positionX,
             positionY: transform.positionY,
             scaleX: transform.scaleX,
-            scaleY: transform.scaleY
+            scaleY: transform.scaleY,
+            cropTop: transform.cropTop || 0,
+            cropBottom: transform.cropBottom || 0,
+            cropLeft: transform.cropLeft || 0,
+            cropRight: transform.cropRight || 0
           }
         });
         
@@ -544,29 +616,47 @@ async function setupScenes(sendLog, portHttp) {
 
     sendLog('✅ Сцены перестроены под компонентные размеры!', 'success');
   } catch (error) {
-    sendLog(`Ошибка настройки: ${error.message}`, 'error');
+    sendLog(`Ошибка настройки сцен: ${error.message}`, 'error');
   }
 }
 
 async function runObsSetup(customPath, sendLog, portHttp) {
   try {
     sendLog('Подключение к OBS WebSocket...', 'info');
+    let isConnected = false;
+
     try {
       await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
+      isConnected = true;
       sendLog('Успешное подключение!', 'success');
     } catch (e) {
-      sendLog('OBS не отвечает. Пробуем запустить...', 'warn');
+      sendLog('OBS не отвечает. Пытаемся запустить процесс...', 'warn');
+      
       const isLaunched = await launchOBS(customPath, sendLog);
       if (isLaunched) {
-        try {
-          await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
-        } catch (retryError) { throw new Error('Не удалось подключиться.'); }
-      } else { throw new Error('Автозапуск не удался.'); }
+        sendLog('Ожидание загрузки плагинов OBS (до 15 сек)...', 'info');
+        
+        for (let i = 0; i < 5; i++) {
+          try {
+            await delay(3000);
+            sendLog(`Попытка подключения ${i + 1}/5...`, 'info');
+            await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
+            isConnected = true;
+            sendLog('Успешное подключение после запуска!', 'success');
+            break; 
+          } catch (retryError) {}
+        }
+      }
+    }
+    
+    if (!isConnected) {
+      throw new Error('Убедитесь, что в OBS -> Инструменты -> Настройки WebSocket -> Порт: 4455 и СНЯТА галочка "Аутентификация"!');
     }
     
     await setupScenes(sendLog, portHttp);
     await obs.disconnect();
     return { status: 'ok' };
+    
   } catch (error) {
     sendLog(error.message, 'error');
     return { status: 'error', message: error.message };
@@ -586,12 +676,23 @@ async function exportLayout(sendLog) {
         const { sceneItems } = await obs.call('GetSceneItemList', { sceneName });
         for (const item of sceneItems) {
           if (item.sourceName === '⚙️ [Ядро] Звуки и Системы') continue;
+          
           const { sceneItemTransform } = await obs.call('GetSceneItemTransform', { sceneName, sceneItemId: item.sceneItemId });
-          layout[sceneName][item.sourceName] = {
-            index: item.sceneItemIndex, positionX: Math.round(sceneItemTransform.positionX),
+          
+          const exportItem = {
+            index: item.sceneItemIndex,
+            positionX: Math.round(sceneItemTransform.positionX),
             positionY: Math.round(sceneItemTransform.positionY),
-            scaleX: Number(sceneItemTransform.scaleX.toFixed(2)), scaleY: Number(sceneItemTransform.scaleY.toFixed(2))
+            scaleX: Number(sceneItemTransform.scaleX.toFixed(2)),
+            scaleY: Number(sceneItemTransform.scaleY.toFixed(2))
           };
+
+          if (sceneItemTransform.cropTop) exportItem.cropTop = sceneItemTransform.cropTop;
+          if (sceneItemTransform.cropBottom) exportItem.cropBottom = sceneItemTransform.cropBottom;
+          if (sceneItemTransform.cropLeft) exportItem.cropLeft = sceneItemTransform.cropLeft;
+          if (sceneItemTransform.cropRight) exportItem.cropRight = sceneItemTransform.cropRight;
+
+          layout[sceneName][item.sourceName] = exportItem;
         }
       } catch (err) { sendLog(`Сцена ${sceneName} не найдена или пуста.`, 'warn'); }
     }
@@ -750,6 +851,258 @@ function getTunnelStatus() {
 
 module.exports = { startServers, broadcastToWidgets, setRemoteUpdateCallback, getLocalIP, toggleTunnel, getTunnelStatus, PORT_HTTP: PORT };
 
+--- START OF FILE backend/updateManager.js ---
+
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const os = require('os');
+const { exec } = require('child_process');
+const configManager = require('./configManager');
+
+const rootDir = path.join(__dirname, '..');
+const versionFilePath = path.join(rootDir, 'version.json');
+
+function getLocalVersionInfo() {
+  try {
+    if (fs.existsSync(versionFilePath)) {
+      return JSON.parse(fs.readFileSync(versionFilePath, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('[UPDATER] Ошибка чтения version.json:', e);
+  }
+  return { version: '1.0.0', githubRepo: 'ksusha-sher/stream-launcher', channel: 'stable' };
+}
+
+function compareVersions(v1, v2) {
+  const clean = v => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const p1 = clean(v1);
+  const p2 = clean(v2);
+  const len = Math.max(p1.length, p2.length);
+  for (let i = 0; i < len; i++) {
+    const num1 = p1[i] || 0;
+    const num2 = p2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      headers: {
+        'User-Agent': 'Stream-Launcher-AutoUpdater',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    };
+    https.get(url, options, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchJson(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`GitHub API вернул статус ${res.statusCode}`));
+      }
+      let rawData = '';
+      res.on('data', chunk => rawData += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(rawData));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+async function checkForUpdates(customRepo = null) {
+  const localInfo = getLocalVersionInfo();
+  const repo = customRepo || localInfo.githubRepo;
+
+  if (!repo || repo === 'ksusha-sher/stream-launcher') {
+    // Если репозиторий не настроен, выводим локальную информацию без ошибок
+    return {
+      hasUpdate: false,
+      currentVersion: localInfo.version,
+      latestVersion: localInfo.version,
+      releaseNotes: 'Укажите актуальный репозиторий GitHub в настройках.',
+      downloadUrl: null
+    };
+  }
+
+  try {
+    const releaseUrl = `https://api.github.com/repos/${repo}/releases/latest`;
+    const latestRelease = await fetchJson(releaseUrl);
+
+    const latestTag = latestRelease.tag_name || latestRelease.name || '1.0.0';
+    const isNewer = compareVersions(latestTag, localInfo.version) > 0;
+
+    let downloadUrl = null;
+    if (latestRelease.assets && latestRelease.assets.length > 0) {
+      const zipAsset = latestRelease.assets.find(a => a.name.endsWith('.zip'));
+      if (zipAsset) downloadUrl = zipAsset.browser_download_url;
+    }
+    if (!downloadUrl) {
+      downloadUrl = latestRelease.zipball_url;
+    }
+
+    return {
+      hasUpdate: isNewer,
+      currentVersion: localInfo.version,
+      latestVersion: latestTag,
+      releaseNotes: latestRelease.body || 'Новые исправления и обновления виджетов.',
+      downloadUrl
+    };
+  } catch (error) {
+    console.warn('[UPDATER] Проверка обновлений завершилась с ошибкой:', error.message);
+    return {
+      hasUpdate: false,
+      currentVersion: localInfo.version,
+      error: error.message
+    };
+  }
+}
+
+function downloadFile(url, destPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createWriteStream(destPath);
+    const options = { headers: { 'User-Agent': 'Stream-Launcher-AutoUpdater' } };
+
+    const request = https.get(url, options, (response) => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        fileStream.close();
+        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+        return downloadFile(response.headers.location, destPath, onProgress).then(resolve).catch(reject);
+      }
+
+      if (response.statusCode !== 200) {
+        fileStream.close();
+        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+        return reject(new Error(`Ошибка скачивания: HTTP ${response.statusCode}`));
+      }
+
+      const totalBytes = parseInt(response.headers['content-length'], 10) || 0;
+      let downloadedBytes = 0;
+
+      response.on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        if (totalBytes > 0 && typeof onProgress === 'function') {
+          const percent = Math.round((downloadedBytes / totalBytes) * 100);
+          onProgress(percent);
+        }
+      });
+
+      response.pipe(fileStream);
+
+      fileStream.on('finish', () => {
+        fileStream.close(() => resolve(destPath));
+      });
+    });
+
+    request.on('error', (err) => {
+      fileStream.close();
+      if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+      reject(err);
+    });
+  });
+}
+
+function extractZip(archivePath, destDir) {
+  return new Promise((resolve, reject) => {
+    const safeArchive = archivePath.replace(/'/g, "''");
+    const safeDest = destDir.replace(/'/g, "''");
+    const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '${safeArchive}' -DestinationPath '${safeDest}' -Force"`;
+
+    exec(cmd, (error) => {
+      if (error) return reject(new Error(`Ошибка распаковки PowerShell: ${error.message}`));
+      resolve();
+    });
+  });
+}
+
+function copyFolderRecursiveSync(source, target, skipFiles = ['config.json', '.git', '.electron-data', 'node_modules']) {
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target, { recursive: true });
+  }
+
+  const items = fs.readdirSync(source);
+  for (const item of items) {
+    if (skipFiles.includes(item)) continue;
+
+    const srcPath = path.join(source, item);
+    const dstPath = path.join(target, item);
+    const stat = fs.statSync(srcPath);
+
+    if (stat.isDirectory()) {
+      copyFolderRecursiveSync(srcPath, dstPath, skipFiles);
+    } else {
+      fs.copyFileSync(srcPath, dstPath);
+    }
+  }
+}
+
+async function performUpdate(downloadUrl, onStatusUpdate) {
+  const tempDir = path.join(os.tmpdir(), `stream-launcher-upd-${Date.now()}`);
+  const archivePath = path.join(os.tmpdir(), `update-${Date.now()}.zip`);
+  const extractDir = path.join(tempDir, 'extracted');
+
+  try {
+    fs.mkdirSync(tempDir, { recursive: true });
+    fs.mkdirSync(extractDir, { recursive: true });
+
+    onStatusUpdate({ stage: 'downloading', percent: 0, text: 'Скачивание пакета обновления...' });
+    await downloadFile(downloadUrl, archivePath, (percent) => {
+      onStatusUpdate({ stage: 'downloading', percent, text: `Скачивание: ${percent}%` });
+    });
+
+    onStatusUpdate({ stage: 'extracting', percent: 100, text: 'Распаковка файлов оверлеев...' });
+    await extractZip(archivePath, extractDir);
+
+    let sourceRoot = extractDir;
+    const extractedContents = fs.readdirSync(extractDir);
+    if (extractedContents.length === 1 && fs.statSync(path.join(extractDir, extractedContents[0])).isDirectory()) {
+      sourceRoot = path.join(extractDir, extractedContents[0]);
+    }
+
+    onStatusUpdate({ stage: 'applying', percent: 100, text: 'Применение виджетов и стилей...' });
+
+    // 1. Копируем виджеты, стили, логику (config.json надежно защищен от затирания)
+    copyFolderRecursiveSync(sourceRoot, rootDir, ['config.json', '.git', '.electron-data', 'node_modules']);
+
+    // 2. Если в архиве был version.json, обновляем локальную версию
+    const newVersionFile = path.join(sourceRoot, 'version.json');
+    if (fs.existsSync(newVersionFile)) {
+      try {
+        const newVerData = JSON.parse(fs.readFileSync(newVersionFile, 'utf-8'));
+        fs.writeFileSync(versionFilePath, JSON.stringify(newVerData, null, 2), 'utf-8');
+      } catch (e) {}
+    }
+
+    // 3. Мягкая синхронизация схемы конфига: если появились новые виджеты, добавляем их дефолты
+    const currentConfig = configManager.getConfig();
+    configManager.saveConfig(currentConfig);
+
+    onStatusUpdate({ stage: 'completed', percent: 100, text: 'Обновление успешно установлено!' });
+    return { success: true };
+  } catch (error) {
+    console.error('[UPDATER] Критическая ошибка обновления:', error);
+    onStatusUpdate({ stage: 'error', percent: 0, text: `Ошибка: ${error.message}` });
+    return { success: false, error: error.message };
+  } finally {
+    try {
+      if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath);
+      if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (e) {}
+  }
+}
+
+module.exports = {
+  getLocalVersionInfo,
+  checkForUpdates,
+  performUpdate
+};
+
 --- START OF FILE css/style.css ---
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -806,6 +1159,56 @@ body {
 }
 .badge-success { background-color: var(--color-success-dim); color: var(--color-success); border: 1px solid var(--color-success-dim); box-shadow: 0 0 10px var(--accent-glow); }
 .badge-danger { background-color: var(--color-danger-dim); color: var(--color-danger); border: 1px solid var(--color-danger-dim); }
+.badge-update { background-color: var(--accent-secondary-dim); color: var(--accent-secondary); border: 1px solid var(--accent-secondary); font-size: 11px; padding: 2px 8px; animation: updatePulse 2s infinite; }
+
+@keyframes updatePulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--accent-secondary-glow); }
+  70% { transform: scale(1.05); box-shadow: 0 0 10px 4px var(--accent-secondary-glow); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+
+/* === Центр обновлений (Стильная карточка) === */
+.update-center-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.2) 100%);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+.update-center-card.has-update {
+  background: linear-gradient(135deg, rgba(255, 0, 127, 0.1) 0%, rgba(16, 18, 24, 0.95) 100%);
+  border-color: var(--accent-secondary);
+  box-shadow: 0 8px 32px var(--accent-secondary-glow);
+}
+.update-center-card.has-update::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+  background: var(--accent-secondary); box-shadow: 0 0 15px var(--accent-secondary);
+}
+.update-icon-wrapper {
+  width: 50px; height: 50px; border-radius: 14px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-primary); transition: all 0.3s ease;
+}
+.update-center-card.has-update .update-icon-wrapper {
+  background: var(--accent-secondary-dim); color: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+  animation: iconLevitate 2s infinite alternate ease-in-out;
+}
+@keyframes iconLevitate {
+  0% { transform: translateY(0); box-shadow: 0 0 10px var(--accent-secondary-glow); }
+  100% { transform: translateY(-3px); box-shadow: 0 5px 20px var(--accent-secondary-glow); }
+}
+
+.update-progress-bar {
+  width: 100%; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden; margin-top: 15px;
+}
+.update-progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  width: 0%; transition: width 0.3s ease; box-shadow: 0 0 10px var(--accent-glow);
+}
+.spin-anim { animation: spinIcon 1s linear infinite; }
+@keyframes spinIcon { 100% { transform: rotate(360deg); } }
 
 /* === Скроллбары === */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -830,7 +1233,7 @@ body {
 .brand svg { color: var(--accent-primary); filter: drop-shadow(0 0 8px var(--accent-primary)); }
 
 .nav-link {
-  display: flex; align-items: center; gap: var(--space-sm);
+  display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px; border-radius: var(--radius-sm);
   color: var(--text-secondary); text-decoration: none;
   font-weight: 600; transition: all 0.3s ease; margin-bottom: 6px;
@@ -883,8 +1286,24 @@ body {
 .btn-secondary { background-color: transparent; color: var(--text-primary); border-color: var(--border-hover); }
 .btn-secondary:hover:not(:disabled) { background-color: var(--bg-surface-hover); border-color: var(--text-secondary); }
 
+.btn-accent { 
+  background-color: var(--accent-secondary); color: #fff; 
+  box-shadow: 0 0 15px var(--accent-secondary-glow); 
+}
+.btn-accent:hover:not(:disabled) { background-color: #e60073; transform: translateY(-2px); box-shadow: 0 0 25px var(--accent-secondary-glow); }
+
 .btn-danger { background-color: transparent; color: var(--color-danger); border-color: var(--color-danger-dim); }
 .btn-danger:hover:not(:disabled) { background-color: var(--color-danger-dim); box-shadow: 0 0 15px var(--color-danger-dim); }
+
+/* === Inputs === */
+.text-input {
+  width: 100%; background-color: var(--bg-app); border: 1px solid var(--border-hover);
+  color: var(--text-primary); padding: 12px 16px; border-radius: var(--radius-sm); outline: none;
+  font-family: inherit; font-size: 14px; transition: border-color 0.2s;
+}
+.text-input:focus { border-color: var(--accent-primary); box-shadow: 0 0 10px var(--accent-primary-dim); }
+
+.input-row { display: flex; gap: var(--space-sm); align-items: center; }
 
 /* === Tabs === */
 .tabs { display: flex; gap: var(--space-sm); border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px; margin-bottom: 24px; }
@@ -946,38 +1365,22 @@ body {
 .modal-close:hover { color: var(--color-danger); background: var(--color-danger-dim); }
 .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
 
-/* === Контейнер превью (Исправлено) === */
 .preview-container {
-  width: 100%; 
-  aspect-ratio: 16 / 9; /* Задаем строгие пропорции экрана 16:9 */
-  background: #050508;
-  border-radius: var(--radius-md); 
-  border: 2px dashed var(--border-hover);
-  position: relative; 
-  overflow: hidden;
+  width: 100%; aspect-ratio: 16 / 9; background: #050508;
+  border-radius: var(--radius-md); border: 2px dashed var(--border-hover);
+  position: relative; overflow: hidden;
 }
-
 .preview-iframe {
-  position: absolute;
-  top: 0; left: 0;
-  width: 1920px; /* Жесткий размер под холст OBS */
-  height: 1080px; 
-  border: none; 
-  background: transparent;
-  transform-origin: top left;
-  /* Масштаб теперь задается скриптом */
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  border: none; background: transparent; transform-origin: top left;
 }
 
-/* === CSS Кастомный Toggle Switch (Главное исправление) === */
-.toggle-switch-input {
-  opacity: 0; width: 0; height: 0; position: absolute;
-}
+/* === Кастомный Toggle Switch === */
+.toggle-switch-input { opacity: 0; width: 0; height: 0; position: absolute; }
 .toggle-track {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--bg-app);
-  border: 1px solid var(--border-hover);
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  background: var(--bg-app); border: 1px solid var(--border-hover);
+  border-radius: 12px; transition: all 0.3s ease;
 }
 .toggle-thumb {
   position: absolute; top: 3px; left: 3px;
@@ -986,11 +1389,8 @@ body {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
-
-/* Состояние: Включено */
 .toggle-switch-input:checked ~ .toggle-track {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
+  background: var(--accent-primary); border-color: var(--accent-primary);
 }
 .toggle-switch-input:checked ~ .toggle-thumb {
   left: 23px;
@@ -1048,6 +1448,16 @@ body {
 }
 
 --- START OF FILE data/widgetsManifest.js ---
+
+/* ФАЙЛ: data/widgetsManifest.js */
+
+import { MediaLibrary } from '../widgets/media/media-db.js';
+
+// Автоматически генерируем опции для выпадающего списка из базы данных
+const libraryOptions = Object.keys(MediaLibrary).map(key => ({
+  label: `[ID: ${key}] ${MediaLibrary[key].title}`,
+  value: key
+}));
 
 export const widgetsManifest = [
   {
@@ -1133,8 +1543,7 @@ export const widgetsManifest = [
         { label: "Пузыри (Плавное всплытие)", value: "bubble" },
         { label: "Фонтан (Резкий взрыв)", value: "fountain" }
       ]},
-      { key: "maxEmotes", label: "Макс. смайлов за раз", type: "number", default: 20, cmd: "!emotesmax" },
-      { type: "button", label: "Тест: Взрыв смайлов", action: "TEST_EMOTES", payload: {} }
+      { key: "maxEmotes", label: "Макс. смайлов за раз", type: "number", default: 20, cmd: "!emotesmax" }
     ]
   },
   {
@@ -1210,14 +1619,11 @@ export const widgetsManifest = [
     id: "media",
     category: "overlay",
     title: "🎮 Карточка активности",
-    description: "Блок с обложкой игры или видео на экране.",
+    description: "Оставьте ссылку на YouTube пустой, чтобы показать игру из базы.",
     controls: [
-      { key: "isActive", label: "Включить карточку", type: "checkbox", default: false, cmd: "!mediacard" },
-      { key: "type", label: "Тип контента", type: "select", default: "game", cmd: "!mediatype", options: [
-        { label: "Игра (Авто-поиск Steam)", value: "game" },
-        { label: "YouTube Видео", value: "yt" }
-      ]},
-      { key: "query", label: "Название игры или ссылка YT", type: "text", default: "Minecraft", cmd: "!mediaquery", description: "Игры из базы: Subnautica, Minecraft, Lethal Company, CS2, Valorant, Atomic Heart, Stalker" }
+      { key: "isActive", label: "Показывать на экране", type: "checkbox", default: false, cmd: "" },
+      { key: "libId", label: "Медиа из библиотеки", type: "select", default: "cs2", options: libraryOptions },
+      { key: "ytLink", label: "Ссылка на YouTube (перекрывает библиотеку)", type: "text", default: "" }
     ]
   },
   {
@@ -1278,7 +1684,7 @@ import { Sidebar } from './components/sidebar.js';
 
 import { HomeView } from './views/homeView.js';
 import { WidgetsView } from './views/widgetsView.js';
-import { RemoteView } from './views/remoteView.js'; // НОВЫЙ РОУТ
+import { RemoteView } from './views/remoteView.js';
 import { SettingsView } from './views/settingsView.js';
 import { GuideView } from './views/guideView.js';
 
@@ -1303,7 +1709,6 @@ function renderAppLayout(path, ViewObj, params, state) {
   `;
 }
 
-// Автономный мониторинг подключения к OBS Studio
 function monitorOBSConnection() {
   const checkConnection = () => {
     const ws = new WebSocket('ws://127.0.0.1:4455');
@@ -1329,13 +1734,35 @@ function monitorOBSConnection() {
   checkConnection();
 }
 
+async function checkBackgroundUpdates() {
+  if (!store.state.isElectronEnv) return;
+  try {
+    const updateInfo = await window.obsAPI.checkForUpdates();
+    store.setUpdateInfo(updateInfo);
+    if (updateInfo.hasUpdate) {
+      store.addLog(`Доступна новая версия виджетов: v${updateInfo.latestVersion}!`, 'info');
+    }
+  } catch (err) {
+    console.warn('[BOOTSTRAP] Фоновая проверка обновлений пропущена:', err.message);
+  }
+}
+
 async function bootstrap() {
   if (store.state.isElectronEnv) {
     window.obsAPI.onLog((data) => store.addLog(data.message, data.type));
-    window.obsAPI.onRemoteConfigUpdate((config) => {
-      store.syncFromRemote(config);
-    });
+    window.obsAPI.onRemoteConfigUpdate((config) => store.syncFromRemote(config));
     
+    window.obsAPI.onUpdateProgress((status) => {
+      store.setUpdateInfo({
+        isUpdating: status.stage !== 'completed' && status.stage !== 'error',
+        progressPercent: status.percent,
+        statusText: status.text
+      });
+      if (status.stage === 'completed') {
+        store.setUpdateInfo({ hasUpdate: false, isUpdating: false });
+      }
+    });
+
     try {
       const config = await window.obsAPI.getConfig();
       if (config) store.updateConfig(config); 
@@ -1348,6 +1775,8 @@ async function bootstrap() {
   
   const router = new Router(routes, store, renderAppLayout);
   router.init();
+
+  setTimeout(checkBackgroundUpdates, 1500);
 }
 
 bootstrap();
@@ -1443,7 +1872,19 @@ export class Store {
       config: {
         obsPath: '',
         twitchChannel: 'ksusha__sher',
+        githubRepo: 'Bagerca/New-vijet-launcher',
         widgets: {}
+      },
+      updateInfo: {
+        hasUpdate: false,
+        isChecking: false,
+        currentVersion: '1.0.0',
+        latestVersion: '1.0.0',
+        releaseNotes: '',
+        downloadUrl: null,
+        isUpdating: false,
+        progressPercent: 0,
+        statusText: ''
       },
       isElectronEnv: typeof window !== 'undefined' && Boolean(window.obsAPI)
     };
@@ -1455,7 +1896,6 @@ export class Store {
     this._initializeDefaults();
     this._loadStandaloneConfig();
 
-    // Слушаем LocalStorage для синхронизации Live Preview
     window.addEventListener('storage', (e) => {
       if (e.key === this.STORAGE_KEY && e.newValue) {
         try {
@@ -1473,7 +1913,7 @@ export class Store {
     this.state.widgetsManifest.forEach(widget => {
       if (sanitized[widget.id]) {
         widget.controls.forEach(control => {
-          if (control.type === 'button') return; // Кнопки не сохраняем в конфиг
+          if (control.type === 'button') return;
           const val = sanitized[widget.id][control.key];
           if (val !== undefined) {
             if (control.type === 'checkbox') {
@@ -1521,6 +1961,11 @@ export class Store {
   
   setState(newStatePartial) {
     this.state = { ...this.state, ...newStatePartial };
+    this.notify();
+  }
+
+  setUpdateInfo(info) {
+    this.state.updateInfo = { ...this.state.updateInfo, ...info };
     this.notify();
   }
 
@@ -1579,7 +2024,6 @@ export class Store {
     this.addLog(`Виджет "${manifest.title}" сброшен до заводских настроек.`, 'success');
   }
 
-  // Широковещательная рассылка для тестовых кнопок (отправляет в Live Preview)
   broadcastAction(action, payload) {
     const data = { event: 'WIDGET_ACTION', action, payload, ts: Date.now() };
     try { localStorage.setItem(this.ACTION_KEY, JSON.stringify(data)); } catch(e){}
@@ -1606,19 +2050,33 @@ export const store = new Store();
 --- START OF FILE js/components/sidebar.js ---
 
 import { icons } from '../utils/icons.js';
+import { store } from '../store.js';
 
 export function Sidebar(currentPath) {
   const isActive = (path) => currentPath === path ? 'active' : '';
+  const updateInfo = store.getState().updateInfo;
+  const updateBadge = updateInfo.hasUpdate ? `<span class="badge badge-update">NEW</span>` : '';
   
   return `
     <aside class="sidebar">
       <div class="brand">${icons.logo()} Stream Pack</div>
       <nav class="nav-menu">
-        <a href="#/home" class="nav-link ${isActive('#/home')}">${icons.home()} Дашборд</a>
-        <a href="#/widgets" class="nav-link ${isActive('#/widgets')}">${icons.palette()} Оверлеи</a>
-        <a href="#/remote" class="nav-link ${isActive('#/remote')}">${icons.remote()} Управление</a>
-        <a href="#/settings" class="nav-link ${isActive('#/settings')}">${icons.settings()} Настройки</a>
-        <a href="#/guide" class="nav-link ${isActive('#/guide')}">${icons.guide()} Инструкция</a>
+        <a href="#/home" class="nav-link ${isActive('#/home')}">
+          <span class="d-flex align-center gap-sm">${icons.home()} Дашборд</span>
+          ${updateBadge}
+        </a>
+        <a href="#/widgets" class="nav-link ${isActive('#/widgets')}">
+          <span class="d-flex align-center gap-sm">${icons.palette()} Оверлеи</span>
+        </a>
+        <a href="#/remote" class="nav-link ${isActive('#/remote')}">
+          <span class="d-flex align-center gap-sm">${icons.remote()} Управление</span>
+        </a>
+        <a href="#/settings" class="nav-link ${isActive('#/settings')}">
+          <span class="d-flex align-center gap-sm">${icons.settings()} Настройки</span>
+        </a>
+        <a href="#/guide" class="nav-link ${isActive('#/guide')}">
+          <span class="d-flex align-center gap-sm">${icons.guide()} Инструкция</span>
+        </a>
       </nav>
     </aside>
   `;
@@ -1953,7 +2411,62 @@ import { store } from '../store.js';
 import { icons } from '../utils/icons.js';
 
 function escapeHtml(str) { 
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
+}
+
+function cleanVer(v) {
+  if (!v) return '1.0.0';
+  return v.replace(/^v+/, '');
+}
+
+const syncIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>`;
+const boxIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
+
+function renderUpdateCardHtml(upd, isEnvOK) {
+  const current = cleanVer(upd.currentVersion);
+  const latest = cleanVer(upd.latestVersion);
+
+  return `
+    <section class="card mb-md update-center-card ${upd.hasUpdate ? 'has-update' : ''}">
+      <div class="d-flex justify-between align-center">
+        <div class="d-flex align-center gap-md">
+          <div class="update-icon-wrapper">
+            ${upd.hasUpdate ? boxIcon : syncIcon}
+          </div>
+          <div>
+            <h3 class="text-lg text-bold mb-xs d-flex align-center gap-sm">
+              Сборка виджетов: v${escapeHtml(current)}
+              ${upd.hasUpdate ? `<span class="badge badge-update">Доступна v${escapeHtml(latest)}</span>` : `<span class="badge badge-success">Актуально</span>`}
+            </h3>
+            <p class="text-secondary text-sm">
+              ${upd.isChecking ? 'Поиск новых версий на GitHub...' : (upd.hasUpdate ? 'Доступны новые дизайны и исправления ошибок.' : 'У вас установлена самая последняя версия виджетов.')}
+            </p>
+          </div>
+        </div>
+        <div>
+          ${upd.hasUpdate
+            ? `<button id="btn-apply-update" class="btn btn-accent" ${upd.isUpdating ? 'disabled' : ''}>
+                ${upd.isUpdating ? 'Установка...' : '⚡ Обновить виджеты'}
+               </button>`
+            : `<button id="btn-check-update" class="btn btn-secondary" ${upd.isChecking || !isEnvOK ? 'disabled' : ''}>
+                <span class="${upd.isChecking ? 'spin-anim' : ''} d-flex align-center gap-sm">${syncIcon} ${upd.isChecking ? 'Проверка...' : 'Проверить'}</span>
+               </button>`
+          }
+        </div>
+      </div>
+      ${upd.hasUpdate ? `
+        <div class="update-details mt-md pt-md" style="border-top: 1px solid rgba(255,255,255,0.1);">
+          <p class="text-secondary text-sm mb-sm"><strong style="color: #fff;">Что нового:</strong> ${escapeHtml(upd.releaseNotes || 'Улучшения виджетов')}</p>
+          ${upd.isUpdating ? `
+            <div class="update-progress-bar">
+              <div class="update-progress-fill" style="width: ${upd.progressPercent}%;"></div>
+            </div>
+            <div class="text-muted text-sm mt-xs text-right">${escapeHtml(upd.statusText)}</div>
+          ` : ''}
+        </div>
+      ` : ''}
+    </section>
+  `;
 }
 
 export const HomeView = {
@@ -1962,6 +2475,7 @@ export const HomeView = {
   _setupHandler: null,
   _filterHandler: null,
   _clearHandler: null,
+  _lastUpdateStateStr: '',
 
   render: (state) => {
     HomeView._renderedLogsCount = state.logs.length;
@@ -1975,8 +2489,13 @@ export const HomeView = {
     return `
       <header class="view-header">
         <h1 class="view-title">Главная панель</h1>
-        <p class="view-subtitle">Мониторинг систем и управление Master-сценами.</p>
+        <p class="view-subtitle">Мониторинг систем, оверлеев и управление сценами.</p>
       </header>
+
+      <!-- РЕАКТИВНЫЙ СЛОТ ЦЕНТРА ОБНОВЛЕНИЙ -->
+      <div id="update-card-slot">
+        ${renderUpdateCardHtml(state.updateInfo, state.isElectronEnv)}
+      </div>
       
       <!-- Статус-панели -->
       <div class="d-flex gap-md mb-md flex-wrap">
@@ -1999,8 +2518,7 @@ export const HomeView = {
         <div>
           <h3 class="text-lg mb-xs d-flex align-center gap-sm">${icons.obs()} Master Scene Architecture</h3>
           <p class="text-secondary" style="max-width: 500px; line-height: 1.5;">
-            Эта кнопка проверяет наличие нужных сцен в OBS, обновляет ссылки на виджеты и принудительно сбрасывает их кэш. 
-            Используйте при первом запуске или сбоях.
+            Создает 4 готовые стрим-сцены в OBS, обновляет слои виджетов и принудительно очищает их кэш.
           </p>
         </div>
         <button id="btn-setup" class="btn btn-primary" style="padding: 14px 24px; font-size: 15px;" ${isBtnDisabled ? 'disabled' : ''}>
@@ -2036,12 +2554,66 @@ export const HomeView = {
     `;
   },
 
+  _bindUpdateCardEvents: (state) => {
+    const btnCheckUpdate = document.getElementById('btn-check-update');
+    const btnApplyUpdate = document.getElementById('btn-apply-update');
+
+    if (btnCheckUpdate) {
+      btnCheckUpdate.onclick = async () => {
+        if (!state.isElectronEnv) return;
+        store.setUpdateInfo({ isChecking: true });
+        store.addLog('Поиск новых версий на GitHub...', 'info');
+        
+        try {
+          const info = await window.obsAPI.checkForUpdates();
+          store.setUpdateInfo({ ...info, isChecking: false });
+          
+          if (info.hasUpdate) {
+            store.addLog(`Найдено обновление: v${cleanVer(info.latestVersion)}!`, 'success');
+          } else {
+            store.addLog('Установлена самая актуальная версия виджетов.', 'success');
+          }
+        } catch (e) {
+          store.setUpdateInfo({ isChecking: false });
+          store.addLog(`Ошибка проверки обновлений: ${e.message}`, 'error');
+        }
+      };
+    }
+
+    if (btnApplyUpdate) {
+      btnApplyUpdate.onclick = async () => {
+        const upd = store.getState().updateInfo;
+        if (!upd.downloadUrl || !state.isElectronEnv) return;
+
+        store.setUpdateInfo({ isUpdating: true, progressPercent: 10, statusText: 'Старт загрузки...' });
+        store.addLog(`Запуск обновления виджетов до v${cleanVer(upd.latestVersion)}...`, 'info');
+
+        try {
+          const result = await window.obsAPI.startUpdate(upd.downloadUrl);
+          if (result.success) {
+            store.addLog('Пакет виджетов успешно обновлен!', 'success');
+            store.setUpdateInfo({ hasUpdate: false, isUpdating: false, currentVersion: cleanVer(upd.latestVersion) });
+            await window.obsAPI.setup(store.getState().config.obsPath);
+          } else {
+            store.addLog(`Ошибка обновления: ${result.error}`, 'error');
+            store.setUpdateInfo({ isUpdating: false, statusText: 'Сбой' });
+          }
+        } catch (err) {
+          store.addLog(`Критическая ошибка обновления: ${err.message}`, 'error');
+          store.setUpdateInfo({ isUpdating: false });
+        }
+      };
+    }
+  },
+
   mount: (params, state) => {
     const terminalBox = document.getElementById('terminal-box');
     const btnSetup = document.getElementById('btn-setup');
     const logFilter = document.getElementById('log-filter');
     const btnClearLogs = document.getElementById('btn-clear-logs');
     
+    HomeView._bindUpdateCardEvents(state);
+
     if (terminalBox) terminalBox.scrollTop = terminalBox.scrollHeight;
 
     HomeView._filterHandler = (e) => {
@@ -2064,12 +2636,12 @@ export const HomeView = {
 
     HomeView._setupHandler = async () => {
       store.setState({ isProcessing: true });
-      store.addLog('Инициализация Master Scene Architecture...', 'info');
+      store.addLog('Инициализация сцен в OBS...', 'info');
       try {
         const response = await window.obsAPI.setup(store.getState().config.obsPath);
-        if (response.status === 'error') store.addLog(`Ошибка с OBS: ${response.message}`, 'error');
+        if (response.status === 'error') store.addLog(`Ошибка OBS: ${response.message}`, 'error');
       } catch (error) {
-        store.addLog(`Критический сбой: ${error.message}`, 'error');
+        store.addLog(`Сбой: ${error.message}`, 'error');
       } finally {
         store.setState({ isProcessing: false });
       }
@@ -2077,6 +2649,18 @@ export const HomeView = {
     if (btnSetup && state.isElectronEnv) btnSetup.addEventListener('click', HomeView._setupHandler);
 
     HomeView._unsubStore = store.subscribe((newState) => {
+      // 1. РЕАКТИВНОЕ ОБНОВЛЕНИЕ КАРТОЧКИ ОБНОВЛЕНИЯ
+      const currentUpdateStr = JSON.stringify(newState.updateInfo);
+      if (currentUpdateStr !== HomeView._lastUpdateStateStr) {
+        HomeView._lastUpdateStateStr = currentUpdateStr;
+        const slot = document.getElementById('update-card-slot');
+        if (slot) {
+          slot.innerHTML = renderUpdateCardHtml(newState.updateInfo, newState.isElectronEnv);
+          HomeView._bindUpdateCardEvents(newState);
+        }
+      }
+
+      // 2. ЖУРНАЛ ЛОГОВ
       if (terminalBox) {
         if (newState.logs.length === 0 && HomeView._renderedLogsCount > 0) {
           terminalBox.innerHTML = '<span class="log-time" id="log-placeholder">Журнал очищен...</span>';
@@ -2106,18 +2690,6 @@ export const HomeView = {
           HomeView._renderedLogsCount = newState.logs.length;
           terminalBox.scrollTop = terminalBox.scrollHeight;
         }
-      }
-
-      // Перерисовка всего View при изменении критичных статусов (чтобы обновить бейджи)
-      if (
-        (newState.obsStatus !== state.obsStatus) ||
-        (newState.isProcessing !== state.isProcessing) ||
-        (newState.config.twitchChannel !== state.config.twitchChannel)
-      ) {
-        // Soft reload to update bindings
-        const currentHash = window.location.hash;
-        window.location.hash = currentHash + '&refresh=1';
-        setTimeout(() => { window.location.hash = currentHash; }, 10);
       }
     });
   },
@@ -2285,10 +2857,12 @@ export const SettingsView = {
   _saveTwitchHandler: null,
   _browseObsHandler: null,
   _exportLayoutHandler: null,
+  _saveRepoHandler: null,
 
   render: (state) => {
     const twitchChannel = state.config.twitchChannel || '';
     const obsPath = state.config.obsPath || '';
+    const githubRepo = state.config.githubRepo || 'Bagerca/New-vijet-launcher';
     const isEnvOK = state.isElectronEnv;
 
     return `
@@ -2297,28 +2871,43 @@ export const SettingsView = {
         <p class="view-subtitle">Системные параметры и интеграции.</p>
       </header>
 
+      <!-- Twitch -->
       <section class="card mb-md">
         <header class="mb-md border-bottom pb-md">
           <h3 class="text-lg mb-xs d-flex align-center gap-sm">${icons.twitch()} Интеграция Twitch</h3>
           <p class="text-secondary text-sm">Имя канала для парсинга чата, алертов и команд модераторов.</p>
         </header>
         <form class="input-row" onsubmit="return false;">
-          <input type="text" id="twitch-input" class="text-input" value="${twitchChannel}" placeholder="Например: ksusha__sher" />
+          <input type="text" id="twitch-input" class="text-input" value="${escapeHtml(twitchChannel)}" placeholder="Например: ksusha__sher" />
           <button id="btn-save-twitch" class="btn btn-primary" type="button">Сохранить</button>
         </form>
       </section>
 
+      <!-- Настройки обновлений -->
+      <section class="card mb-md">
+        <header class="mb-md border-bottom pb-md">
+          <h3 class="text-lg mb-xs d-flex align-center gap-sm">🔄 Сервер обновлений</h3>
+          <p class="text-secondary text-sm">Репозиторий, откуда лаунчер скачивает новые виджеты. Сама проверка и установка находится на вкладке Дашборда.</p>
+        </header>
+        <div class="input-row">
+          <input type="text" id="repo-input" class="text-input" value="${escapeHtml(githubRepo)}" placeholder="Bagerca/New-vijet-launcher" />
+          <button id="btn-save-repo" class="btn btn-secondary">Изменить</button>
+        </div>
+      </section>
+
+      <!-- OBS Path -->
       <section class="card mb-md">
         <header class="mb-md border-bottom pb-md">
           <h3 class="text-lg mb-xs d-flex align-center gap-sm">${icons.settings()} Путь к OBS Studio (obs64.exe)</h3>
           <p class="text-secondary text-sm">Если автопоиск при инициализации не сработал, укажите путь вручную.</p>
         </header>
         <div class="input-row">
-          <input type="text" id="obs-path-input" class="text-input" readonly value="${obsPath || 'Автопоиск активен'}" />
+          <input type="text" id="obs-path-input" class="text-input" readonly value="${escapeHtml(obsPath || 'Автопоиск активен')}" />
           <button id="btn-browse" class="btn btn-secondary" ${!isEnvOK ? 'disabled' : ''}>Обзор...</button>
         </div>
       </section>
 
+      <!-- Developer Tools -->
       <section class="card mb-md">
         <header class="mb-md border-bottom pb-md">
           <h3 class="text-lg mb-xs">Инструменты разработчика</h3>
@@ -2339,12 +2928,21 @@ export const SettingsView = {
     const btnBrowse = document.getElementById('btn-browse');
     const inputObs = document.getElementById('obs-path-input');
     const btnExportLayout = document.getElementById('btn-export-layout');
+    const btnSaveRepo = document.getElementById('btn-save-repo');
+    const inputRepo = document.getElementById('repo-input');
 
     SettingsView._saveTwitchHandler = () => {
       const channel = inputTwitch.value.trim();
       if (!channel) return;
       store.updateConfig({ twitchChannel: channel });
       store.addLog(`Канал Twitch изменен на: ${channel}`, 'success');
+    };
+
+    SettingsView._saveRepoHandler = () => {
+      const repo = inputRepo.value.trim();
+      if (!repo) return;
+      store.updateConfig({ githubRepo: repo });
+      store.addLog(`Репозиторий обновлений изменен на: ${repo}`, 'info');
     };
 
     SettingsView._browseObsHandler = async () => {
@@ -2370,20 +2968,27 @@ export const SettingsView = {
     };
 
     if (btnSaveTwitch && inputTwitch) btnSaveTwitch.addEventListener('click', SettingsView._saveTwitchHandler);
+    if (btnSaveRepo && inputRepo) btnSaveRepo.addEventListener('click', SettingsView._saveRepoHandler);
     if (btnBrowse) btnBrowse.addEventListener('click', SettingsView._browseObsHandler);
     if (btnExportLayout) btnExportLayout.addEventListener('click', SettingsView._exportLayoutHandler);
   },
 
   unmount: () => {
     const btnSaveTwitch = document.getElementById('btn-save-twitch');
+    const btnSaveRepo = document.getElementById('btn-save-repo');
     const btnBrowse = document.getElementById('btn-browse');
     const btnExportLayout = document.getElementById('btn-export-layout');
 
     if (btnSaveTwitch && SettingsView._saveTwitchHandler) btnSaveTwitch.removeEventListener('click', SettingsView._saveTwitchHandler);
+    if (btnSaveRepo && SettingsView._saveRepoHandler) btnSaveRepo.removeEventListener('click', SettingsView._saveRepoHandler);
     if (btnBrowse && SettingsView._browseObsHandler) btnBrowse.removeEventListener('click', SettingsView._browseObsHandler);
     if (btnExportLayout && SettingsView._exportLayoutHandler) btnExportLayout.removeEventListener('click', SettingsView._exportLayoutHandler);
   }
 };
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 --- START OF FILE js/views/widgetsView.js ---
 
@@ -3392,12 +3997,11 @@ body {
 
 --- START OF FILE widgets/chat/script.js ---
 
-import { widgetsManifest } from '/data/widgetsManifest.js';
-import { AvatarManager } from '/shared/AvatarManager.js';
+/* ФАЙЛ: widgets/chat/script.js */
 
-/* ====================================================================
-   ДВИЖОК РЕНДЕРА ЧАТА (Grid Architecture)
-   ==================================================================== */
+import { widgetsManifest } from '../../data/widgetsManifest.js';
+import { AvatarManager } from '../shared/AvatarManager.js';
+
 const AppChat = {
   container: document.getElementById('chat-messages'),
   maxMessages: 15,
@@ -3479,9 +4083,6 @@ const AppChat = {
   }
 };
 
-/* ====================================================================
-   TWITCH И ИНТЕГРАЦИЯ (Сборка сообщения)
-   ==================================================================== */
 let currentClient = null, currentChannel = null, globalConfig = null, ws = null;
 const commandMap = {};
 
@@ -3489,8 +4090,6 @@ widgetsManifest.forEach(w => w.controls.forEach(c => {
   if (c.cmd) commandMap[c.cmd.toLowerCase()] = { widgetId: w.id, key: c.key }; 
 }));
 
-// Конвертер из HEX (#ffffff) + Opacity (0-100) -> в RGBA()
-// Это 100% пуленепробиваемый способ для любых, даже старых версий OBS Studio
 function hexToRgba(hex, opacityPercentage) {
     let h = (hex || '#ffffff').replace('#', '');
     if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -3503,11 +4102,8 @@ function hexToRgba(hex, opacityPercentage) {
 
 function applyChatStyles(chatConfig) {
   if (!chatConfig) return;
-  
-  // Применяем магию генерации rgba из HEX цвета и ползунка прозрачности
   const finalBgColor = hexToRgba(chatConfig.bgColor, chatConfig.bgOpacity);
   document.documentElement.style.setProperty('--chat-bg-color', finalBgColor);
-  
   if (chatConfig.textColor) document.documentElement.style.setProperty('--chat-text-color', chatConfig.textColor);
   if (chatConfig.fontSize) document.documentElement.style.setProperty('--chat-font-size', `${chatConfig.fontSize}px`);
 }
@@ -3548,7 +4144,43 @@ async function init() {
         const cmd = args[0].toLowerCase();
         const value = args.slice(1).join(' ');
         
-        if (commandMap[cmd] && value !== '') {
+        // ==== УМНЫЙ ПАРСЕР ДЛЯ ВИДЖЕТА MEDIA ====
+        if (cmd === '!media' || cmd === '!медиа') {
+          const arg = args[1];
+          if (arg) {
+             let newMediaConf = { ...(globalConfig.widgets.media || {}) };
+             let changed = false;
+
+             if (arg === 'on' || arg === 'show') {
+                 newMediaConf.isActive = true;
+                 changed = true;
+             } else if (arg === 'off' || arg === 'hide') {
+                 newMediaConf.isActive = false;
+                 changed = true;
+             } else if (arg.includes('youtu.be') || arg.includes('youtube.com')) {
+                 newMediaConf.isActive = true;
+                 newMediaConf.ytLink = arg; // Вставляем ютуб
+                 changed = true;
+             } else {
+                 newMediaConf.isActive = true;
+                 newMediaConf.libId = arg.toLowerCase();
+                 newMediaConf.ytLink = ""; // ОБЯЗАТЕЛЬНО очищаем ютуб, чтобы показалась библиотека
+                 changed = true;
+             }
+
+             if (changed) {
+                 if (!globalConfig.widgets) globalConfig.widgets = {};
+                 globalConfig.widgets.media = newMediaConf;
+                 if (ws && ws.readyState === WebSocket.OPEN) {
+                     ws.send(JSON.stringify({ event: 'UPDATE_CONFIG', data: globalConfig }));
+                     AppChat.renderSystemMessage(`Карточка медиа обновлена!`);
+                 }
+             }
+          }
+        }
+        // =========================================
+        
+        else if (commandMap[cmd] && value !== '') {
           const { widgetId, key } = commandMap[cmd];
           if (!globalConfig.widgets[widgetId]) globalConfig.widgets[widgetId] = {};
           globalConfig.widgets[widgetId][key] = value;
@@ -3616,6 +4248,8 @@ setTimeout(init, 300);
 
 --- START OF FILE widgets/chat/style.css ---
 
+/* ФАЙЛ: widgets/chat/style.css */
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap');
 
 :root { 
@@ -3650,44 +4284,61 @@ body {
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 40px, rgba(0,0,0,1) 100%);
 }
 
-#chat-messages { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; width: 100%; }
+/* Увеличенный отступ между сообщениями */
+#chat-messages { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; width: 100%; }
 
-.chat-block { position: relative; display: flex; flex-direction: column; width: 100%; animation: slideInChat 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: left bottom; z-index: 10; isolation: isolate; }
+/* Адаптивная ширина пузыря под размер текста */
+.chat-block { position: relative; display: flex; flex-direction: column; width: fit-content; max-width: 100%; animation: slideInChat 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: left bottom; z-index: 10; isolation: isolate; }
 .chat-out { animation: slideOutChat 0.4s cubic-bezier(0.36, 0, 0.66, -0.56) forwards; }
 
 .chat-fx-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; }
 .chat-fx-front { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 20; pointer-events: none; }
-.chat-bubble { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: start; }
+.chat-bubble { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
 .chat-bubble-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .chat-avatar-slot { grid-column: 1; position: relative; z-index: 2; flex-shrink: 0; }
 .chat-avatar { background-image: var(--avatar-img); background-size: cover; background-position: center; }
 .chat-content { grid-column: 2; display: flex; flex-direction: column; min-width: 0; position: relative; z-index: 2; }
-.chat-header { display: flex; align-items: center; width: 100%; }
-.chat-header-info { display: flex; align-items: center; min-width: 0; flex-wrap: wrap; gap: 8px; }
-.chat-header-right { margin-left: auto; display: flex; align-items: center; flex-shrink: 0; gap: 8px; }
-.chat-badges-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+.chat-header { display: flex; align-items: center; width: 100%; gap: 15px; }
+.chat-header-info { display: flex; align-items: center; min-width: 0; flex-wrap: wrap; gap: 10px; }
+.chat-header-right { margin-left: auto; display: flex; align-items: center; flex-shrink: 0; gap: 10px; }
+.chat-badges-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
 .chat-user { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-text { word-wrap: break-word; max-width: 100%; }
 .chat-text-inner { display: block; }
-.chat-emote { vertical-align: middle; display: inline-block; height: 36px; margin: -8px 3px -6px 3px; }
-.message-system { background: rgba(30, 41, 59, 0.9); border-left: 5px solid #10b981; color: #cbd5e1; font-style: italic; padding: 14px 18px; border-radius: 8px; font-size: 18px; width: 100%; box-sizing: border-box; }
+
+/* Смайлы увеличены в 1.25 раз (было 36px, стало 45px) */
+.chat-emote { vertical-align: middle; display: inline-block; height: 45px; margin: -10px 4px -8px 4px; }
+
+/* Системные сообщения тоже пропорционально увеличены */
+.message-system { background: rgba(30, 41, 59, 0.9); border-left: 6px solid #10b981; color: #cbd5e1; font-style: italic; padding: 18px 22px; border-radius: 10px; font-size: 22px; width: 100%; box-sizing: border-box; }
 .message-system.error { border-left-color: #ef4444; color: #fca5a5; }
 
-@keyframes slideInChat { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes slideOutChat { from { opacity: 1; transform: scale(1); height: auto; margin-bottom: 16px; } to { opacity: 0; transform: scale(0.8) translateX(-20px); height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border: none; } }
+@keyframes slideInChat { from { opacity: 0; transform: translateY(25px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes slideOutChat { from { opacity: 1; transform: scale(1); height: auto; margin-bottom: 20px; } to { opacity: 0; transform: scale(0.8) translateX(-25px); height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border: none; } }
 
-.chat-block[data-style="default"] .chat-bubble { gap: 16px; }
-.chat-block[data-style="default"] .chat-bubble-bg { grid-column: 1 / -1; grid-row: 1 / -1; background: var(--chat-bg-color); border-radius: 6px 20px 20px 20px; border: 1px solid rgba(255, 255, 255, 0.8); border-left: 4px solid var(--user-color); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15), inset 0 1px 3px rgba(255, 255, 255, 0.5); }
-.chat-block[data-style="default"] .chat-bubble-bg::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 50px; background: linear-gradient(90deg, var(--user-color), transparent); opacity: 0.1; }
-.chat-block[data-style="default"] .chat-avatar-slot { margin: 14px 0 14px 14px; display: flex; align-items: center; }
-.chat-block[data-style="default"] .chat-content { padding: 14px 18px 14px 0; justify-content: center; }
-.chat-block[data-style="default"] .chat-header { margin-bottom: 4px; }
-.chat-block[data-style="default"] .chat-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #e0e0e0; border: 2px solid #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15); }
-.chat-block[data-style="default"] .chat-user { font-weight: 800; font-size: 18px; letter-spacing: 0.2px; color: var(--user-color); text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-.chat-block[data-style="default"] .chat-time { font-size: 13px; color: rgba(0, 0, 0, 0.35); font-weight: 700; letter-spacing: 0.5px; }
-.chat-block[data-style="default"] .chat-text { font-size: var(--chat-font-size); line-height: 1.4; color: var(--chat-text-color); font-weight: 600; }
-.chat-block[data-style="default"] .chat-emote { filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15)); }
-.chat-block.is-first-time[data-style="default"], .chat-block.is-highlighted[data-style="default"] { margin-top: 16px; }
+/* ================= СТИЛЬ ПО УМОЛЧАНИЮ (УВЕЛИЧЕННЫЙ В 1.25) ================= */
+.chat-block[data-style="default"] .chat-bubble { gap: 20px; }
+.chat-block[data-style="default"] .chat-bubble-bg { grid-column: 1 / -1; grid-row: 1 / -1; background: var(--chat-bg-color); border-radius: 8px 25px 25px 25px; border: 1px solid rgba(255, 255, 255, 0.8); border-left: 5px solid var(--user-color); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), inset 0 1px 4px rgba(255, 255, 255, 0.5); }
+.chat-block[data-style="default"] .chat-bubble-bg::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 62px; background: linear-gradient(90deg, var(--user-color), transparent); opacity: 0.1; }
+
+.chat-block[data-style="default"] .chat-avatar-slot { margin: 18px 0 18px 18px; display: flex; align-items: center; }
+.chat-block[data-style="default"] .chat-content { padding: 18px 22px 18px 0; justify-content: center; }
+.chat-block[data-style="default"] .chat-header { margin-bottom: 5px; }
+
+/* Аватарка: было 36px -> стало 45px */
+.chat-block[data-style="default"] .chat-avatar { width: 45px; height: 45px; border-radius: 50%; background-color: #e0e0e0; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }
+
+/* Имя юзера: было 18px -> стало 22px */
+.chat-block[data-style="default"] .chat-user { font-weight: 800; font-size: 22px; letter-spacing: 0.2px; color: var(--user-color); text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+/* Время сообщения: было 13px -> стало 16px */
+.chat-block[data-style="default"] .chat-time { font-size: 16px; color: rgba(0, 0, 0, 0.35); font-weight: 700; letter-spacing: 0.5px; }
+
+/* Текст сообщения масштабируется относительно переменной из лаунчера */
+.chat-block[data-style="default"] .chat-text { font-size: calc(var(--chat-font-size) * 1.25); line-height: 1.4; color: var(--chat-text-color); font-weight: 600; }
+
+.chat-block[data-style="default"] .chat-emote { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); }
+.chat-block.is-first-time[data-style="default"], .chat-block.is-highlighted[data-style="default"] { margin-top: 20px; }
 
 --- START OF FILE widgets/deaths/index.html ---
 
@@ -4801,6 +5452,8 @@ window.addEventListener('storage', (e) => {
 
 --- START OF FILE widgets/frame/style.css ---
 
+/* ФАЙЛ: widgets/frame/style.css */
+
 :root {
   --color-1: #00ff66;
   --color-2: #ff007f;
@@ -4827,7 +5480,8 @@ body {
 }
 
 #webcam-frame {
-  --frame-thickness: 8px; --frame-radius: 24px;
+  --frame-thickness: 12px; /* Было 8px, теперь 12px (толще в 1.5 раза) */
+  --frame-radius: 24px;
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   border: var(--frame-thickness) solid transparent; border-radius: var(--frame-radius);
   box-sizing: border-box; transition: border-width 0.5s ease, border-radius 0.5s ease; z-index: 2;
@@ -5228,69 +5882,6 @@ body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; bac
 @keyframes heartBeat { 0% { transform: scale(1); } 30% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .pop-text { transform: scale(1.15); color: var(--goal-color) !important; }
 
---- START OF FILE widgets/media/games-db.js ---
-
-/* ФАЙЛ: widgets/media/games-db.js */
-/* Экспортируем как ES модуль для автономной работы */
-
-export const GamesDatabase = {
-    // === ИГРЫ ===
-    "subnautica": { 
-        title: "Subnautica", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/264710/library_600x900_2x.jpg", themeColor: "#00E5FF", type: "game",
-        meta: ["Выживание", "Unknown Worlds", "2018"]
-    },
-    "subnautica 2": { 
-        title: "Subnautica 2", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3257220/library_600x900_2x.jpg", themeColor: "#00FF7F", type: "game",
-        meta: ["Выживание", "Unknown Worlds", "Ожидание"]
-    },
-    "lethal company": { 
-        title: "Lethal Company", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1966720/library_600x900_2x.jpg", themeColor: "#FF4500", type: "game",
-        meta: ["Кооп Хоррор", "Zeekerss", "2023"]
-    },
-    "repo": { 
-        title: "R.E.P.O.", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3110260/library_600x900_2x.jpg", themeColor: "#f39c12", type: "game",
-        meta: ["Экшен / Хоррор", "2024"]
-    },
-    "minecraft": { 
-        title: "Minecraft", cover: "https://upload.wikimedia.org/wikipedia/ru/b/b1/Minecraft_cover.png", themeColor: "#5ea936", type: "game",
-        meta: ["Песочница", "Mojang", "2011"]
-    },
-    "valorant": {
-        title: "VALORANT", cover: "https://cdn.mobygames.com/covers/8885662-valorant-windows-front-cover.jpg", themeColor: "#FF4655", type: "game",
-        meta: ["Тактический шутер", "Riot Games", "2020"]
-    },
-    "content warning": {
-        title: "Content Warning", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2881650/library_600x900_2x.jpg", themeColor: "#f1c40f", type: "game",
-        meta: ["Кооп Хоррор", "Skog", "2024"]
-    },
-    "cs2": {
-        title: "Counter-Strike 2", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/library_600x900_2x.jpg", themeColor: "#F59E0B", type: "game",
-        meta: ["Тактический шутер", "Valve", "2023"]
-    },
-    "atomic heart": {
-        title: "Atomic Heart", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/668580/library_600x900_2x.jpg", themeColor: "#DC2626", type: "game",
-        meta: ["Шутер / Экшен", "Mundfish", "2023"]
-    },
-    "stalker": {
-        title: "S.T.A.L.K.E.R.: Тень Чернобыля", cover: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4500/library_600x900_2x.jpg", themeColor: "#EAB308", type: "game",
-        meta: ["Шутер / Выживание", "GSC Game World", "2007"]
-    },
-    
-    // === ФИЛЬМЫ И СЕРИАЛЫ ===
-    "digital circus": {
-        title: "Удивительный цифровой цирк", cover: "https://upload.wikimedia.org/wikipedia/ru/3/30/The_Amazing_Digital_Circus_Title_Card.png", themeColor: "#E52521", type: "series",
-        meta: ["Мультсериал", "Glitch Productions", "YouTube"]
-    },
-    "spider noir": {
-        title: "Spider-Noir", cover: "generated", themeColor: "#4a4a4a", type: "series",
-        meta: ["Супергероика / Нуар", "Николас Кейдж", "2025"]
-    },
-    "lego batman": {
-        title: "Лего Фильм: Бэтмен", cover: "generated", themeColor: "#FFE81F", type: "series",
-        meta: ["Мультфильм / Комедия", "Warner Bros.", "2017"]
-    }
-};
-
 --- START OF FILE widgets/media/index.html ---
 
 <!DOCTYPE html>
@@ -5329,10 +5920,125 @@ export const GamesDatabase = {
 </body>
 </html>
 
+--- START OF FILE widgets/media/media-db.js ---
+
+/* ФАЙЛ: widgets/media/games-db.js */
+
+export const MediaLibrary = {
+    // === ИГРЫ ===
+    "abyssus": { 
+        title: "Abyssus", cover: "/data/covers/abyssus.jpg", themeColor: "#00e5ff", type: "game",
+        meta: ["Шутер", "PC", "2024"]
+    },
+    "atomic": { 
+        title: "Atomic Heart", cover: "/data/covers/atomic_heart.jpg", themeColor: "#DC2626", type: "game",
+        meta: ["Шутер / Экшен", "Mundfish", "2023"]
+    },
+    "cage": { 
+        title: "Bendy: The Cage", cover: "/data/covers/bendy_cage.png", themeColor: "#f39c12", type: "game",
+        meta: ["Хоррор", "Joey Drew Studios"]
+    },
+    "bendy": { 
+        title: "Bendy and the Ink Machine", cover: "/data/covers/bendy_factory.jpg", themeColor: "#e67e22", type: "game",
+        meta: ["Хоррор / Выживание", "Joey Drew Studios"]
+    },
+    "gnomes": { 
+        title: "Burglin Gnomes", cover: "/data/covers/burglin_gnomes.png", themeColor: "#e74c3c", type: "game",
+        meta: ["Экшен", "Инди"]
+    },
+    "cw": {
+        title: "Content Warning", cover: "/data/covers/content_warning.png", themeColor: "#f1c40f", type: "game",
+        meta: ["Кооп Хоррор", "Skog", "2024"]
+    },
+    "cs2": {
+        title: "Counter-Strike 2", cover: "/data/covers/cs2.png", themeColor: "#F59E0B", type: "game",
+        meta: ["Тактический шутер", "Valve", "2023"]
+    },
+    "delivery": {
+        title: "Delivery & Beyond", cover: "/data/covers/delivery_beyond.jpeg", themeColor: "#9ca3af", type: "game",
+        meta: ["Симулятор", "Инди"]
+    },
+    "dome": {
+        title: "Dome Keeper", cover: "/data/covers/dome_keeper.jpg", themeColor: "#3498db", type: "game",
+        meta: ["Рогалик / Выживание", "Bippinbits", "2022"]
+    },
+    "lethal": { 
+        title: "Lethal Company", cover: "/data/covers/lethal_company.webp", themeColor: "#FF4500", type: "game",
+        meta: ["Кооп Хоррор", "Zeekerss", "2023"]
+    },
+    "mc": { 
+        title: "Minecraft", cover: "/data/covers/minecraft.webp", themeColor: "#5ea936", type: "game",
+        meta: ["Песочница", "Mojang", "2011"]
+    },
+    "repo": { 
+        title: "R.E.P.O.", cover: "/data/covers/repo.jpg", themeColor: "#f39c12", type: "game",
+        meta: ["Кооп Экшен / Хоррор", "2024"]
+    },
+    "stalker": {
+        title: "S.T.A.L.K.E.R.", cover: "/data/covers/stalker.png", themeColor: "#EAB308", type: "game",
+        meta: ["Шутер / Выживание", "GSC Game World"]
+    },
+    "stick": {
+        title: "Stick Fight: The Game", cover: "/data/covers/stick_fight.png", themeColor: "#e74c3c", type: "game",
+        meta: ["Файтинг / Кооп", "Landfall"]
+    },
+    "subnautica": { 
+        title: "Subnautica", cover: "/data/covers/subnautica.png", themeColor: "#00E5FF", type: "game",
+        meta: ["Выживание", "Unknown Worlds", "2018"]
+    },
+    "sub2": { 
+        title: "Subnautica 2", cover: "/data/covers/subnautica_2.png", themeColor: "#00FF7F", type: "game",
+        meta: ["Выживание", "Unknown Worlds", "Ожидание"]
+    },
+    "tomodachi": {
+        title: "Tomodachi Life", cover: "/data/covers/tomodachi.png", themeColor: "#f368e0", type: "game",
+        meta: ["Симулятор Жизни", "Nintendo"]
+    },
+    "valorant": {
+        title: "VALORANT", cover: "/data/covers/valorant.webp", themeColor: "#FF4655", type: "game",
+        meta: ["Тактический шутер", "Riot Games", "2020"]
+    },
+    "vrchat": {
+        title: "VRChat", cover: "/data/covers/vrchat.webp", themeColor: "#3b5998", type: "game",
+        meta: ["Социальная игра", "VR"]
+    },
+    "wt": {
+        title: "War Thunder", cover: "/data/covers/war_thunder.png", themeColor: "#c0392b", type: "game",
+        meta: ["Симулятор / Экшен", "Gaijin"]
+    },"crysis": {
+        title: "Crysis Remastered", cover: "/data/covers/crysis.jpg", themeColor: "#00E5FF", type: "game",
+        meta: ["Шутер", "Crytek", "2020"]
+    },
+
+    // === ФИЛЬМЫ И СЕРИАЛЫ ===
+    "circus": {
+        title: "Цифровой цирк", cover: "/data/covers/digital_circus.jpg", themeColor: "#E52521", type: "series",
+        meta: ["Мультсериал", "Glitch Productions", "YouTube"]
+    },
+    "batman": {
+        title: "Лего Фильм: Бэтмен", cover: "/data/covers/lego_batman.jpg", themeColor: "#FFE81F", type: "series",
+        meta: ["Мультфильм / Комедия", "Warner Bros.", "2017"]
+    },
+    "noir_bw": {
+        title: "Spider-Noir (ЧБ)", cover: "/data/covers/spider_noir_bw.jpg", themeColor: "#7f8c8d", type: "series",
+        meta: ["Супергероика / Нуар", "Amazon", "2025"]
+    },
+    "noir": {
+        title: "Spider-Noir", cover: "/data/covers/spider_noir_color.jpg", themeColor: "#c0392b", type: "series",
+        meta: ["Супергероика / Нуар", "Amazon", "2025"]
+    },
+    "winx": {
+        title: "Клуб Винкс", cover: "/data/covers/winx.png", themeColor: "#ff9ff3", type: "series",
+        meta: ["Мультсериал", "Магия", "Италия"]
+    }
+};
+
 --- START OF FILE widgets/media/script.js ---
 
-import { GamesDatabase } from './games-db.js';
-import { icons } from '/js/utils/icons.js';
+/* ФАЙЛ: widgets/media/script.js */
+
+import { MediaLibrary } from './media-db.js';
+import { icons } from '../../js/utils/icons.js';
 
 const AppMediaInfo = {
     container: document.getElementById('media-info-container'),
@@ -5347,15 +6053,14 @@ const AppMediaInfo = {
     titleEl: document.getElementById('mi-title'),
     metaRowEl: document.getElementById('mi-meta-row'),
 
-    currentQuery: null,
-    currentType: null,
+    currentLibId: null,
+    currentYtLink: null,
 
     init: function() {
         this.ytPlayEl.innerHTML = icons.play();
         this.noIconSlot.innerHTML = icons.noSignal();
         
-        // Автономный фоллбэк: загрузка конфига и прослушивание storage
-        fetch('/api/config')
+        fetch('http://localhost:42069/api/config')
           .then(res => res.json())
           .then(config => this.applyConfig(config.widgets?.media || {}))
           .catch(() => {
@@ -5393,37 +6098,38 @@ const AppMediaInfo = {
         const isOff = config.isActive === false || String(config.isActive) === 'false';
         if (isOff) {
             this.hide();
-            this.currentQuery = null;
+            this.currentLibId = null;
+            this.currentYtLink = null;
             return;
         }
 
-        if (config.query !== this.currentQuery || config.type !== this.currentType) {
-            this.currentQuery = config.query;
-            this.currentType = config.type;
-            this.set(config.type, config.query);
+        if (config.libId !== this.currentLibId || config.ytLink !== this.currentYtLink) {
+            this.currentLibId = config.libId;
+            this.currentYtLink = config.ytLink;
+            this.set(config.libId, config.ytLink);
         } else if (this.container.classList.contains('hidden')) {
             this.container.classList.remove('hidden');
         }
     },
 
-    set: async function(type, query) {
-        if (!this.container || !query) {
+    set: async function(libId, ytLink) {
+        if (!this.container) {
             this.hide(); 
             return;
         }
 
         let mediaData = null;
 
-        if (type === 'game') {
-            const gameKey = query.toLowerCase().trim();
-            mediaData = this.findLocalGame(gameKey);
-            if (!mediaData) mediaData = await this.fetchFromSteam(gameKey);
-        }
-        else if (type === 'yt') {
-            mediaData = await this.fetchFromYouTube(query);
+        if (ytLink && (ytLink.includes('youtu.be') || ytLink.includes('youtube.com'))) {
+            mediaData = await this.fetchFromYouTube(ytLink);
             if (!mediaData) {
-                // Фоллбэк, если ссылка кривая или нет API доступа
                 mediaData = { title: "YouTube Video", cover: "generated", themeColor: "#FF0000", type: "youtube", meta: ["Видео загружается..."] };
+            }
+        } 
+        else if (libId) {
+            mediaData = MediaLibrary[libId.toLowerCase()];
+            if (!mediaData) {
+                mediaData = { title: libId.toUpperCase(), cover: "generated", themeColor: "#ff007f", type: "game", meta: ["Неизвестно"] };
             }
         }
 
@@ -5436,6 +6142,8 @@ const AppMediaInfo = {
             this.container.classList.add('pop-anim');
 
             setTimeout(() => this.checkMarquee(), 100);
+        } else {
+            this.hide();
         }
     },
 
@@ -5445,37 +6153,6 @@ const AppMediaInfo = {
         } else {
             this.titleEl.classList.remove('marquee-active');
         }
-    },
-
-    findLocalGame: function(searchKey) {
-        if (GamesDatabase[searchKey]) return GamesDatabase[searchKey]; 
-        for (let key in GamesDatabase) {
-            if (key.includes(searchKey) || searchKey.includes(key)) return GamesDatabase[key];
-        }
-        return null; 
-    },
-
-    fetchFromSteam: async function(gameName) {
-        try {
-            const encodedTerm = encodeURIComponent(gameName);
-            const url = encodeURIComponent(`https://store.steampowered.com/api/storesearch/?term=${encodedTerm}&l=russian&cc=RU`);
-            const response = await fetch(`https://api.allorigins.win/get?url=${url}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                const steamData = JSON.parse(data.contents);
-                
-                if (steamData && steamData.items && steamData.items.length > 0) {
-                    const game = steamData.items[0]; 
-                    const coverUrl = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.id}/library_600x900_2x.jpg`;
-                    return { 
-                        title: game.name, cover: coverUrl, themeColor: "#00ff66", type: "game", 
-                        meta: ["Steam", "PC"]
-                    };
-                }
-            }
-        } catch (err) {}
-        return { title: gameName.toUpperCase(), cover: "generated", themeColor: "#ff007f", type: "game", meta: ["Пользовательская игра"] };
     },
 
     fetchFromYouTube: async function(urlOrId) {
@@ -8176,4 +8853,3 @@ body {
 .up-live-text { color: #FF0050; font-size: 12px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
 .up-divider { width: 2px; height: 20px; background: rgba(0, 0, 0, 0.1); }
 .up-time { font-size: 20px; font-weight: 900; color: #1a1a1a; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
-

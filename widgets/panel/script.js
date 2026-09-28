@@ -28,6 +28,9 @@ function renderUI() {
     const widgetConfig = config.widgets[widget.id] || {};
     
     const controlsHtml = widget.controls.map(control => {
+      // Игнорируем кнопки в панели модератора
+      if (control.type === 'button') return '';
+
       const val = widgetConfig[control.key] !== undefined ? widgetConfig[control.key] : control.default;
       
       let inputHtml = '';
@@ -35,6 +38,11 @@ function renderUI() {
         inputHtml = `<input type="range" data-widget="${widget.id}" data-key="${control.key}" data-cmd="${control.cmd}" value="${val}" min="0" max="100">`;
       } else if (control.type === 'checkbox') {
         inputHtml = `<input type="checkbox" class="toggle-switch" data-widget="${widget.id}" data-key="${control.key}" data-cmd="${control.cmd}" ${val ? 'checked' : ''}>`;
+      } else if (control.type === 'select') {
+        const opts = control.options.map(o => `<option value="${o.value}" ${val === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+        inputHtml = `<select data-widget="${widget.id}" data-key="${control.key}" data-cmd="${control.cmd}">${opts}</select>`;
+      } else if (control.type === 'textarea') {
+        inputHtml = `<textarea data-widget="${widget.id}" data-key="${control.key}" data-cmd="${control.cmd}">${val}</textarea>`;
       } else {
         inputHtml = `<input type="${control.type}" data-widget="${widget.id}" data-key="${control.key}" data-cmd="${control.cmd}" value="${val}">`;
       }
@@ -43,7 +51,7 @@ function renderUI() {
         <div class="control-group">
           <div class="label-row">
             <span>${control.label}</span>
-            ${control.type === 'range' ? `<span id="val-${widget.id}-${control.key}">${val}%</span>` : `<span style="color:var(--text-muted)">${control.cmd}</span>`}
+            ${control.type === 'range' ? `<span id="val-${widget.id}-${control.key}">${val}</span>` : `<span style="color:var(--text-muted)">${control.cmd || ''}</span>`}
           </div>
           ${inputHtml}
         </div>`;
@@ -61,12 +69,11 @@ function handleInput(e) {
   const key = target.getAttribute('data-key');
   const cmd = target.getAttribute('data-cmd');
   
-  // Поддержка чекбокса
   const value = target.type === 'checkbox' ? target.checked : target.value;
 
   if (target.type === 'range') {
     const valLabel = document.getElementById(`val-${widgetId}-${key}`);
-    if (valLabel) valLabel.textContent = `${value}%`;
+    if (valLabel) valLabel.textContent = value;
   }
 
   if (currentMode === 'ws') {
@@ -76,7 +83,11 @@ function handleInput(e) {
       ws.send(JSON.stringify({ event: 'UPDATE_CONFIG', data: config }));
     }
   } else {
-    // В режиме чата для чекбоксов копируем 'on' или 'off'
+    // В режиме чата копируем команду в буфер
+    if (!cmd) {
+      showToast('У этой настройки нет чат-команды');
+      return;
+    }
     let cmdValue = value;
     if (target.type === 'checkbox') cmdValue = value ? 'on' : 'off';
     
@@ -114,13 +125,40 @@ function connectWS() {
       const msg = JSON.parse(event.data);
       if (msg.event === 'CONFIG_UPDATED') {
         config = msg.data;
-        // Частичное обновление чекбоксов, чтобы избежать перерендера при смене состояния
+        
+        // Синхронизация всех полей с анимацией
         widgetsManifest.forEach(w => w.controls.forEach(c => {
-          if (c.type === 'checkbox') {
-            const input = document.querySelector(`input[data-widget="${w.id}"][data-key="${c.key}"]`);
-            if (input && document.activeElement !== input) {
-              const newVal = config.widgets[w.id]?.[c.key] ?? c.default;
-              if (input.checked !== newVal) input.checked = newVal;
+          if (c.type === 'button') return;
+          const input = document.querySelector(`[data-widget="${w.id}"][data-key="${c.key}"]`);
+          
+          if (input && document.activeElement !== input) {
+            const newVal = config.widgets[w.id]?.[c.key] ?? c.default;
+            let isChanged = false;
+
+            if (input.type === 'checkbox') {
+              const isChecked = newVal === true || String(newVal) === 'true';
+              if (input.checked !== isChecked) {
+                input.checked = isChecked;
+                isChanged = true;
+              }
+            } else {
+              if (input.value !== String(newVal)) {
+                input.value = newVal;
+                isChanged = true;
+                if (c.type === 'range') {
+                  const valLabel = document.getElementById(`val-${w.id}-${c.key}`);
+                  if (valLabel) valLabel.textContent = newVal;
+                }
+              }
+            }
+
+            if (isChanged) {
+              const group = input.closest('.control-group');
+              if (group) {
+                group.classList.remove('flash-update');
+                void group.offsetWidth;
+                group.classList.add('flash-update');
+              }
             }
           }
         }));

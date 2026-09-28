@@ -74,8 +74,10 @@
       "vkHandle": "vk.com/club236843653"
     },
     "media": {
-      "isActive": true,
-      "type": "game",
+      "isActive": false,
+      "libId": "atomic",
+      "ytLink": "",
+      "type": "lib",
       "query": "CS2"
     },
     "uptime": {

@@ -1,3 +1,13 @@
+/* ФАЙЛ: data/widgetsManifest.js */
+
+import { MediaLibrary } from '../widgets/media/media-db.js';
+
+// Автоматически генерируем опции для выпадающего списка из базы данных
+const libraryOptions = Object.keys(MediaLibrary).map(key => ({
+  label: `[ID: ${key}] ${MediaLibrary[key].title}`,
+  value: key
+}));
+
 export const widgetsManifest = [
   {
     id: "frame",
@@ -82,8 +92,7 @@ export const widgetsManifest = [
         { label: "Пузыри (Плавное всплытие)", value: "bubble" },
         { label: "Фонтан (Резкий взрыв)", value: "fountain" }
       ]},
-      { key: "maxEmotes", label: "Макс. смайлов за раз", type: "number", default: 20, cmd: "!emotesmax" },
-      { type: "button", label: "Тест: Взрыв смайлов", action: "TEST_EMOTES", payload: {} }
+      { key: "maxEmotes", label: "Макс. смайлов за раз", type: "number", default: 20, cmd: "!emotesmax" }
     ]
   },
   {
@@ -159,14 +168,11 @@ export const widgetsManifest = [
     id: "media",
     category: "overlay",
     title: "🎮 Карточка активности",
-    description: "Блок с обложкой игры или видео на экране.",
+    description: "Оставьте ссылку на YouTube пустой, чтобы показать игру из базы.",
     controls: [
-      { key: "isActive", label: "Включить карточку", type: "checkbox", default: false, cmd: "!mediacard" },
-      { key: "type", label: "Тип контента", type: "select", default: "game", cmd: "!mediatype", options: [
-        { label: "Игра (Авто-поиск Steam)", value: "game" },
-        { label: "YouTube Видео", value: "yt" }
-      ]},
-      { key: "query", label: "Название игры или ссылка YT", type: "text", default: "Minecraft", cmd: "!mediaquery", description: "Игры из базы: Subnautica, Minecraft, Lethal Company, CS2, Valorant, Atomic Heart, Stalker" }
+      { key: "isActive", label: "Показывать на экране", type: "checkbox", default: false, cmd: "" },
+      { key: "libId", label: "Медиа из библиотеки", type: "select", default: "cs2", options: libraryOptions },
+      { key: "ytLink", label: "Ссылка на YouTube (перекрывает библиотеку)", type: "text", default: "" }
     ]
   },
   {

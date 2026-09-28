@@ -31,27 +31,11 @@ export class Store {
       logs: [],
       logFilter: 'all',
       widgetsManifest: widgetsManifest,
-      config: {
-        obsPath: '',
-        twitchChannel: 'ksusha__sher',
-        githubRepo: 'Bagerca/New-vijet-launcher',
-        widgets: {}
-      },
-      updateInfo: {
-        hasUpdate: false,
-        isChecking: false,
-        currentVersion: '1.0.0',
-        latestVersion: '1.0.0',
-        releaseNotes: '',
-        downloadUrl: null,
-        isUpdating: false,
-        progressPercent: 0,
-        statusText: ''
-      },
+      config: { obsPath: '', twitchChannel: 'ksusha__sher', githubRepo: 'Bagerca/New-vijet-launcher', widgets: {} },
+      updateInfo: { hasUpdate: false, isChecking: false, currentVersion: '1.0.0', latestVersion: '1.0.0', releaseNotes: '', downloadUrl: null, isUpdating: false, progressPercent: 0, statusText: '' },
       isElectronEnv: typeof window !== 'undefined' && Boolean(window.obsAPI)
     };
     this.listeners = new Set();
-    
     this._lastSaveTime = 0;
     this._saveTimeout = null;
     
@@ -78,14 +62,12 @@ export class Store {
           if (control.type === 'button') return;
           const val = sanitized[widget.id][control.key];
           if (val !== undefined) {
-            if (control.type === 'checkbox') {
-              sanitized[widget.id][control.key] = (val === true || String(val).toLowerCase() === 'true');
-            } else if (control.type === 'number' || control.type === 'range') {
+            if (control.type === 'checkbox') sanitized[widget.id][control.key] = (val === true || String(val).toLowerCase() === 'true');
+            else if (control.type === 'number' || control.type === 'range') {
               const parsed = Number(val);
               sanitized[widget.id][control.key] = isNaN(parsed) ? control.default : parsed;
-            } else {
-              sanitized[widget.id][control.key] = String(val);
-            }
+            } 
+            else sanitized[widget.id][control.key] = String(val);
           }
         });
       }
@@ -95,9 +77,7 @@ export class Store {
 
   _initializeDefaults() {
     this.state.widgetsManifest.forEach(widget => {
-      if (!this.state.config.widgets[widget.id]) {
-        this.state.config.widgets[widget.id] = {};
-      }
+      if (!this.state.config.widgets[widget.id]) this.state.config.widgets[widget.id] = {};
       widget.controls.forEach(control => {
         if (control.type !== 'button' && this.state.config.widgets[widget.id][control.key] === undefined) {
           this.state.config.widgets[widget.id][control.key] = control.default;
@@ -133,57 +113,45 @@ export class Store {
 
   async updateConfig(newConfigPartial) {
     const mergedConfig = deepMerge({}, this.state.config, newConfigPartial);
-    if (newConfigPartial.widgets) {
-      mergedConfig.widgets = this._sanitizeWidgetsConfig(mergedConfig.widgets);
-    }
+    if (newConfigPartial.widgets) mergedConfig.widgets = this._sanitizeWidgetsConfig(mergedConfig.widgets);
     
     this.state.config = mergedConfig;
     this.notify();
 
     const now = Date.now();
-    const throttleMs = 100;
-
     const performSave = async () => {
       this._lastSaveTime = Date.now();
       try { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state.config)); } catch(e){}
-
       if (this.state.isElectronEnv) {
-        try {
-          await window.obsAPI.saveConfig(this.state.config);
-        } catch (err) {
-          this.addLog(`Ошибка сохранения в ядро: ${err.message}`, 'error');
-        }
+        try { await window.obsAPI.saveConfig(this.state.config); } 
+        catch (err) { this.addLog(`Ошибка сохранения: ${err.message}`, 'error'); }
       }
     };
 
-    if (now - this._lastSaveTime > throttleMs) {
+    if (now - this._lastSaveTime > 100) {
       clearTimeout(this._saveTimeout);
       await performSave();
     } else {
       clearTimeout(this._saveTimeout);
-      this._saveTimeout = setTimeout(performSave, throttleMs);
+      this._saveTimeout = setTimeout(performSave, 100);
     }
   }
 
+  // СТРОГОЕ ОБНОВЛЕНИЕ СЕРВЕРОМ:
   syncFromRemote(newConfig) {
     const mergedConfig = deepMerge({}, this.state.config, newConfig);
     if (newConfig.widgets) mergedConfig.widgets = this._sanitizeWidgetsConfig(mergedConfig.widgets);
     this.state.config = mergedConfig;
-    this.notify();
+    this.notify(); // Запускает вспышки в UI
   }
   
   resetWidgetToDefaults(widgetId) {
     const manifest = this.state.widgetsManifest.find(w => w.id === widgetId);
     if (!manifest) return;
-    
     const newWidgetConfig = {};
-    manifest.controls.forEach(c => { 
-      if (c.type !== 'button') newWidgetConfig[c.key] = c.default; 
-    });
-    
-    const newWidgets = { [widgetId]: newWidgetConfig };
-    this.updateConfig({ widgets: newWidgets });
-    this.addLog(`Виджет "${manifest.title}" сброшен до заводских настроек.`, 'success');
+    manifest.controls.forEach(c => { if (c.type !== 'button') newWidgetConfig[c.key] = c.default; });
+    this.updateConfig({ widgets: { [widgetId]: newWidgetConfig } });
+    this.addLog(`Виджет "${manifest.title}" сброшен.`, 'success');
   }
 
   broadcastAction(action, payload) {
@@ -198,12 +166,7 @@ export class Store {
   }
 
   clearLogs() { this.setState({ logs: [] }); }
-  
-  subscribe(listener) { 
-    this.listeners.add(listener); 
-    return () => this.listeners.delete(listener);
-  }
-  
+  subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   notify() { this.listeners.forEach(l => l(this.state)); }
 }
 

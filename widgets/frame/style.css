@@ -1,3 +1,5 @@
+/* ФАЙЛ: widgets/frame/style.css */
+
 :root {
   --color-1: #00ff66;
   --color-2: #ff007f;
@@ -24,7 +26,8 @@ body {
 }
 
 #webcam-frame {
-  --frame-thickness: 8px; --frame-radius: 24px;
+  --frame-thickness: 12px; /* Было 8px, теперь 12px (толще в 1.5 раза) */
+  --frame-radius: 24px;
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   border: var(--frame-thickness) solid transparent; border-radius: var(--frame-radius);
   box-sizing: border-box; transition: border-width 0.5s ease, border-radius 0.5s ease; z-index: 2;

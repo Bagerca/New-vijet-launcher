@@ -13,6 +13,7 @@ export const WidgetsView = {
     const manifest = state.widgetsManifest;
     const config = state.config.widgets;
     const activeCategory = params?.cat || 'all';
+    const searchQuery = params?.search || '';
 
     const tabs = [
       { id: 'all', label: 'Все' },
@@ -37,13 +38,10 @@ export const WidgetsView = {
       const bodyControls = widget.controls.filter(c => c !== masterControl);
       
       const controlsHtml = bodyControls.map(control => {
-        if (control.type === 'button') {
-          return UIControls.Button(control.label, control.action, control.payload);
-        }
-
+        if (control.type === 'button') return UIControls.Button(control.label, control.action, control.payload);
         const val = widgetConfig[control.key] !== undefined ? widgetConfig[control.key] : control.default;
-        let inputHtml = '';
         
+        let inputHtml = '';
         if (control.type === 'range') inputHtml = UIControls.RangeSlider(widget.id, control.key, val);
         else if (control.type === 'checkbox') inputHtml = UIControls.ToggleSwitch(widget.id, control.key, val, control.label);
         else if (control.type === 'color') inputHtml = UIControls.ColorInput(widget.id, control.key, val);
@@ -67,31 +65,28 @@ export const WidgetsView = {
       
       const dotClass = isMasterActive ? 'badge-success' : 'badge-danger';
       const dotText = isMasterActive ? 'АКТИВЕН' : 'ОТКЛЮЧЕН';
+      const isVisibleBySearch = widget.title.toLowerCase().includes(searchQuery.toLowerCase()) ? 'flex' : 'none';
 
       return `
-        <section class="card widget-card" id="widget-${widget.id}" data-search="${widget.title.toLowerCase()} ${widget.description.toLowerCase()}" style="display: flex; flex-direction: column;">
-          <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px;">
-            <div style="flex: 1;">
+        <article class="card widget-card" id="widget-${widget.id}" data-search="${widget.title.toLowerCase()} ${widget.description.toLowerCase()}" style="display: ${searchQuery ? isVisibleBySearch : 'flex'}; flex-direction: column;">
+          <header class="d-flex justify-between align-start mb-md pb-sm border-bottom">
+            <div class="flex-1">
               <div class="badge ${dotClass} mb-xs" id="status-${widget.id}">${dotText}</div>
               <h3 class="text-lg text-bold" style="color: var(--accent-primary); text-shadow: 0 0 10px var(--accent-glow);">${widget.title}</h3>
               <p class="text-secondary text-sm mt-xs" style="line-height: 1.5; max-width: 90%;">${widget.description}</p>
             </div>
-            <div style="transform: scale(1.2); transform-origin: right top;">
-              ${masterToggleHtml}
-            </div>
+            <div style="transform: scale(1.2); transform-origin: right top;">${masterToggleHtml}</div>
           </header>
-
-          <form onsubmit="return false;" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <form onsubmit="return false;" class="d-flex flex-column flex-1 justify-between">
             <fieldset style="border: none; padding: 0; margin: 0; display: flex; flex-direction: column;">
               ${controlsHtml}
             </fieldset>
-            
-            <div class="d-flex justify-between align-center mt-md pt-md" style="border-top: 1px solid var(--border-subtle);">
+            <div class="d-flex justify-between align-center mt-md pt-md border-top">
               <button class="btn btn-secondary btn-preview" data-preview="${widget.id}" style="padding: 8px 12px; font-size: 12px;">${icons.eye()} Предпросмотр</button>
               <button class="btn btn-danger btn-reset" data-reset="${widget.id}" style="padding: 8px 12px; font-size: 12px; border: none;">${icons.trash()} Сброс</button>
             </div>
           </form>
-        </section>
+        </article>
       `;
     }).join('');
 
@@ -103,32 +98,52 @@ export const WidgetsView = {
       
       <div class="d-flex justify-between align-center mb-md flex-wrap gap-md">
         <nav class="tabs" style="margin-bottom: 0; border: none; padding: 0;">${tabsHtml}</nav>
-        <div class="search-wrapper" style="margin-bottom: 0; width: 300px;">
+        <div class="search-wrapper" style="margin-bottom: 0;">
           ${icons.search()}
-          <input type="text" id="widget-search" class="search-input" placeholder="Поиск по виджетам..." aria-label="Поиск">
+          <input type="text" id="widget-search" class="search-input" value="${searchQuery}" placeholder="Поиск по виджетам...">
         </div>
       </div>
 
       <div id="widgets-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 32px;">
-        ${widgetsHtml || '<p class="text-muted w-full" style="font-size: 18px; padding: 40px; text-align: center; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px dashed var(--border-hover);">Ничего не найдено.</p>'}
+        ${widgetsHtml || '<p class="text-muted w-full text-center" style="padding: 40px;">Ничего не найдено.</p>'}
       </div>
 
-      <!-- Live Preview Modal -->
-      <div id="preview-modal" class="modal-overlay">
+      <!-- Live Preview Modal (Семантичный <dialog>) -->
+      <dialog id="preview-modal" class="modal-dialog">
         <div class="modal-content">
-          <div class="modal-header">
+          <header class="modal-header">
             <h3 class="modal-title" id="preview-title">Live Preview</h3>
-            <button class="modal-close" id="preview-close">${icons.close()}</button>
-          </div>
+            <form method="dialog"><button class="modal-close" id="preview-close">${icons.close()}</button></form>
+          </header>
           <div class="modal-body">
-            <p class="text-muted mb-md text-sm">Виджет отрисовывается в реальном времени. Изменяйте настройки на фоне или жмите тестовые кнопки.</p>
             <div class="preview-container" id="preview-box">
               <iframe id="preview-iframe" class="preview-iframe" src=""></iframe>
             </div>
           </div>
         </div>
-      </div>
+      </dialog>
     `;
+  },
+
+  onParamsChange: (params, state) => {
+    const modal = document.getElementById('preview-modal');
+    const iframe = document.getElementById('preview-iframe');
+    const title = document.getElementById('preview-title');
+    
+    // Deep Link: Открытие/закрытие модалки по URL
+    if (params.preview) {
+        const manifest = state.widgetsManifest.find(w => w.id === params.preview);
+        if (manifest && modal && !modal.open) {
+            title.textContent = `Превью: ${manifest.title}`;
+            iframe.src = `widgets/${params.preview}/index.html`;
+            modal.showModal();
+        }
+    } else {
+        if (modal && modal.open) {
+            modal.close();
+            setTimeout(() => iframe.src = '', 300);
+        }
+    }
   },
 
   mount: (params, state) => {
@@ -137,63 +152,42 @@ export const WidgetsView = {
     const previewModal = document.getElementById('preview-modal');
     const previewBox = document.getElementById('preview-box');
     const previewIframe = document.getElementById('preview-iframe');
-    const previewClose = document.getElementById('preview-close');
-    const previewTitle = document.getElementById('preview-title');
-    
+
     if (!container) return;
 
-    // ГАРАНТИРОВАННОЕ МАСШТАБИРОВАНИЕ IFRAME ПРИ ПОМОЩИ JS
     WidgetsView._resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
-        const width = entry.contentRect.width;
-        const scale = width / 1920;
-        if (previewIframe) {
-          previewIframe.style.transform = `scale(${scale})`;
-        }
+        if (previewIframe) previewIframe.style.transform = `scale(${entry.contentRect.width / 1920})`;
       }
     });
     if (previewBox) WidgetsView._resizeObserver.observe(previewBox);
 
-    const closeModal = () => {
-      previewModal.classList.remove('active');
-      setTimeout(() => previewIframe.src = '', 300); 
-    };
+    // Закрытие модалки по кнопке/Escape синхронизирует URL
+    if (previewModal) {
+      previewModal.addEventListener('close', () => {
+        const hashBase = window.location.hash.split('?')[0];
+        const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        if (searchParams.has('preview')) {
+            searchParams.delete('preview');
+            window.location.hash = `${hashBase}?${searchParams.toString()}`;
+        }
+        setTimeout(() => previewIframe.src = '', 300);
+      });
+      previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) previewModal.close();
+      });
+    }
 
-    if (previewClose) previewClose.addEventListener('click', closeModal);
-    if (previewModal) previewModal.addEventListener('click', (e) => {
-      if (e.target === previewModal) closeModal();
-    });
+    // Если зашли по прямой ссылке с открытой модалкой
+    if (params.preview) WidgetsView.onParamsChange(params, state);
 
     WidgetsView._searchHandler = (e) => {
       const term = e.target.value.toLowerCase();
       const cards = container.querySelectorAll('.widget-card');
-      let visibleCount = 0;
-      
       cards.forEach(card => {
-        const searchText = card.getAttribute('data-search');
-        if (searchText.includes(term)) {
-          card.style.display = 'flex';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
+        card.style.display = card.getAttribute('data-search').includes(term) ? 'flex' : 'none';
       });
-      
-      let emptyMsg = document.getElementById('empty-search-msg');
-      if (visibleCount === 0 && cards.length > 0) {
-        if (!emptyMsg) {
-          emptyMsg = document.createElement('p');
-          emptyMsg.id = 'empty-search-msg';
-          emptyMsg.className = 'text-muted w-full';
-          emptyMsg.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 40px;';
-          emptyMsg.textContent = 'Ничего не найдено по вашему запросу.';
-          container.appendChild(emptyMsg);
-        }
-      } else if (emptyMsg) {
-        emptyMsg.remove();
-      }
     };
-
     if (searchInput) searchInput.addEventListener('input', WidgetsView._searchHandler);
 
     WidgetsView._inputHandler = (e) => {
@@ -201,16 +195,14 @@ export const WidgetsView = {
       if (target.hasAttribute('data-widget') && target.hasAttribute('data-key')) {
         const widgetId = target.getAttribute('data-widget');
         const key = target.getAttribute('data-key');
-        
-        let value = target.type === 'checkbox' ? target.checked : target.value;
+        const value = target.type === 'checkbox' ? target.checked : target.value;
 
         if (target.type === 'range') {
           const valLabel = document.getElementById(`val-${widgetId}-${key}`);
           if (valLabel) valLabel.textContent = value;
         }
 
-        const currentConfig = store.getState().config;
-        const newWidgetsConfig = { ...currentConfig.widgets };
+        const newWidgetsConfig = { ...store.getState().config.widgets };
         if (!newWidgetsConfig[widgetId]) newWidgetsConfig[widgetId] = {};
         newWidgetsConfig[widgetId] = { ...newWidgetsConfig[widgetId], [key]: value };
 
@@ -223,36 +215,29 @@ export const WidgetsView = {
       const btnPreview = e.target.closest('.btn-preview');
       const btnTest = e.target.closest('.btn-test-action');
 
-      if (btnReset) {
-        store.resetWidgetToDefaults(btnReset.getAttribute('data-reset'));
-      }
-      
+      if (btnReset) store.resetWidgetToDefaults(btnReset.getAttribute('data-reset'));
       if (btnTest) {
-        const action = btnTest.getAttribute('data-action');
-        const payloadStr = btnTest.getAttribute('data-payload');
         let payload = {};
-        try { payload = JSON.parse(payloadStr); } catch(err){}
-        store.broadcastAction(action, payload);
+        try { payload = JSON.parse(btnTest.getAttribute('data-payload')); } catch(err){}
+        store.broadcastAction(btnTest.getAttribute('data-action'), payload);
       }
-
       if (btnPreview) {
         const widgetId = btnPreview.getAttribute('data-preview');
-        const manifest = store.getState().widgetsManifest.find(w => w.id === widgetId);
-        previewTitle.textContent = `Превью: ${manifest.title}`;
-        
-        previewIframe.src = `widgets/${widgetId}/index.html`;
-        previewModal.classList.add('active');
+        const hashBase = window.location.hash.split('?')[0];
+        const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        searchParams.set('preview', widgetId);
+        window.location.hash = `${hashBase}?${searchParams.toString()}`;
       }
     };
 
     container.addEventListener('input', WidgetsView._inputHandler);
     container.addEventListener('click', WidgetsView._clickHandler);
 
+    // === РЕАКТИВНАЯ СИНХРОНИЗАЦИЯ STORE ===
     WidgetsView._unsubStore = store.subscribe((newState) => {
-      const manifest = newState.widgetsManifest;
       const config = newState.config.widgets;
 
-      manifest.forEach(widget => {
+      newState.widgetsManifest.forEach(widget => {
         let isMasterActive = true;
         const masterControlKeys = ['enabled', 'isActive', 'isVisible'];
 
@@ -266,16 +251,32 @@ export const WidgetsView = {
 
           const input = document.querySelector(`[data-widget="${widget.id}"][data-key="${control.key}"]`);
           if (input && document.activeElement !== input) {
+            let isChanged = false;
+            
             if (input.type === 'checkbox') {
               const isChecked = newVal === true || String(newVal) === 'true';
-              if (input.checked !== isChecked) input.checked = isChecked;
+              if (input.checked !== isChecked) {
+                  input.checked = isChecked;
+                  isChanged = true;
+              }
             } else {
               if (input.value !== String(newVal)) {
                 input.value = newVal;
+                isChanged = true;
                 if (control.type === 'range') {
                   const valLabel = document.getElementById(`val-${widget.id}-${control.key}`);
                   if (valLabel) valLabel.textContent = newVal;
                 }
+              }
+            }
+
+            // Вспышка при изменении извне
+            if (isChanged) {
+              const wrapper = input.closest('.control-group');
+              if (wrapper) {
+                  wrapper.classList.remove('flash-update');
+                  void wrapper.offsetWidth; 
+                  wrapper.classList.add('flash-update');
               }
             }
           }
@@ -283,13 +284,8 @@ export const WidgetsView = {
 
         const dot = document.getElementById(`status-${widget.id}`);
         if (dot) {
-          if (isMasterActive) {
-            dot.className = 'badge badge-success mb-xs';
-            dot.textContent = 'АКТИВЕН';
-          } else {
-            dot.className = 'badge badge-danger mb-xs';
-            dot.textContent = 'ОТКЛЮЧЕН';
-          }
+          dot.className = isMasterActive ? 'badge badge-success mb-xs' : 'badge badge-danger mb-xs';
+          dot.textContent = isMasterActive ? 'АКТИВЕН' : 'ОТКЛЮЧЕН';
         }
       });
     });
@@ -298,17 +294,12 @@ export const WidgetsView = {
   unmount: () => {
     const container = document.getElementById('widgets-container');
     const searchInput = document.getElementById('widget-search');
-    
-    if (WidgetsView._resizeObserver) {
-      WidgetsView._resizeObserver.disconnect();
-      WidgetsView._resizeObserver = null;
-    }
-
+    if (WidgetsView._resizeObserver) WidgetsView._resizeObserver.disconnect();
     if (container) {
-      if (WidgetsView._inputHandler) container.removeEventListener('input', WidgetsView._inputHandler);
-      if (WidgetsView._clickHandler) container.removeEventListener('click', WidgetsView._clickHandler);
+      container.removeEventListener('input', WidgetsView._inputHandler);
+      container.removeEventListener('click', WidgetsView._clickHandler);
     }
-    if (searchInput && WidgetsView._searchHandler) searchInput.removeEventListener('input', WidgetsView._searchHandler);
+    if (searchInput) searchInput.removeEventListener('input', WidgetsView._searchHandler);
     if (WidgetsView._unsubStore) WidgetsView._unsubStore();
   }
 };

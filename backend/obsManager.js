@@ -1,3 +1,5 @@
+/* ФАЙЛ: backend/obsManager.js */
+
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -29,14 +31,15 @@ function launchOBS(customPath, sendLog) {
     }
 
     if (!obsPath) {
-      sendLog('OBS не найден! Укажите путь вручную.', 'error');
+      sendLog('OBS не найден! Укажите путь вручную в настройках.', 'error');
       return resolve(false);
     }
 
     sendLog(`Запускаем OBS из: ${obsPath}`, 'info');
     const obsProcess = spawn(obsPath, [], { cwd: obsDir, detached: true, stdio: 'ignore' });
     obsProcess.unref(); 
-    setTimeout(() => { resolve(true); }, 5000);
+    
+    setTimeout(() => { resolve(true); }, 2000);
   });
 }
 
@@ -63,7 +66,7 @@ async function removeIfPresent(sceneName, sourceName) {
   }
 }
 
-// ==== ВАШ КАСТОМНЫЙ ЛЕЙАУТ ИЗ OBS ====
+// ==== КАСТОМНЫЙ ЛЕЙАУТ ИЗ OBS ====
 const defaultLayout = {
   "🔴 [Сцена] Начало": {
     "Виджет: Экран Начала": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
@@ -98,7 +101,8 @@ const defaultLayout = {
     "Виджет: Неоновые частицы": { "index": 2, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Заглушка (Blur)": { "index": 3, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Бегущая строка": { "index": 4, "positionX": 535, "positionY": 960, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Чат Twitch": { "index": 5, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7 },
+    // Идеальный вариант: позиция Y приподнята (292), обрезка оставлена (347)
+    "Виджет: Чат Twitch": { "index": 5, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7, "cropTop": 347 },
     "Виджет: Рамка вебки": { "index": 6, "positionX": 0, "positionY": 159, "scaleX": 0.28, "scaleY": 0.28 },
     "Виджет: Счетчик смертей": { "index": 7, "positionX": 259, "positionY": 139, "scaleX": 0.52, "scaleY": 0.52 },
     "Виджет: Медиа Инфо": { "index": 8, "positionX": 0, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
@@ -139,6 +143,7 @@ async function setupScenes(sendLog, portHttp) {
     'Виджет: Таймер стрима (Uptime)': { url: '/uptime/index.html', w: 300, h: 100 },
     'Виджет: Счетчик смертей': { url: '/deaths/index.html', w: 250, h: 200 },
     'Виджет: Бегущая строка': { url: '/ticker/index.html', w: 860, h: 120 },
+    
     'Виджет: Летящие смайлы': { url: '/emotes/index.html', w: 1920, h: 1080 },
     'Виджет: Неоновые частицы': { url: '/particles/index.html', w: 1920, h: 1080 },
     'Виджет: Реклама (Shoutout)': { url: '/shoutout/index.html', w: 1920, h: 1080 },
@@ -171,7 +176,6 @@ async function setupScenes(sendLog, portHttp) {
       if (!existingSceneNames.includes(sceneName)) await obs.call('CreateScene', { sceneName });
     }
     
-    // 1. Создаем ВСЕ источники временно в сцене Ядра (чтобы OBS их не удалил)
     for (const [sourceName, config] of Object.entries(widgetsConfig)) {
       const url = `http://localhost:${portHttp}${config.url}?nocache=${Date.now()}`;
       const { inputs } = await obs.call('GetInputList');
@@ -179,7 +183,7 @@ async function setupScenes(sendLog, portHttp) {
       
       if (!exists) {
         await obs.call('CreateInput', {
-          sceneName: audioCoreScene, // <--- ИСПРАВЛЕНИЕ ТУТ
+          sceneName: targetScenes[0], 
           inputName: sourceName,
           inputKind: 'browser_source',
           inputSettings: { 
@@ -193,7 +197,8 @@ async function setupScenes(sendLog, portHttp) {
       }
     }
     
-    // 2. Распределяем по целевым сценам
+    for (const w of Object.keys(widgetsConfig)) await removeIfPresent(audioCoreScene, w);
+
     for (const sceneName of targetScenes) {
       await enforceSingleItem(sceneName, audioCoreScene);
 
@@ -210,7 +215,11 @@ async function setupScenes(sendLog, portHttp) {
             positionX: transform.positionX,
             positionY: transform.positionY,
             scaleX: transform.scaleX,
-            scaleY: transform.scaleY
+            scaleY: transform.scaleY,
+            cropTop: transform.cropTop || 0,
+            cropBottom: transform.cropBottom || 0,
+            cropLeft: transform.cropLeft || 0,
+            cropRight: transform.cropRight || 0
           }
         });
         
@@ -221,7 +230,6 @@ async function setupScenes(sendLog, portHttp) {
         });
       }
 
-      // Удаляем лишнее из текущей сцены
       for (const widgetName of Object.keys(widgetsConfig)) {
         if (!layoutWidgetNames.includes(widgetName)) {
           await removeIfPresent(sceneName, widgetName);
@@ -229,36 +237,49 @@ async function setupScenes(sendLog, portHttp) {
       }
     }
 
-    // 3. Только ТЕПЕРЬ очищаем временное хранилище (Ядро)
-    for (const w of Object.keys(widgetsConfig)) {
-        await removeIfPresent(audioCoreScene, w);
-    }
-
-    sendLog('✅ Сцены успешно построены!', 'success');
+    sendLog('✅ Сцены перестроены под компонентные размеры!', 'success');
   } catch (error) {
-    sendLog(`Ошибка настройки: ${error.message}`, 'error');
+    sendLog(`Ошибка настройки сцен: ${error.message}`, 'error');
   }
 }
 
 async function runObsSetup(customPath, sendLog, portHttp) {
   try {
     sendLog('Подключение к OBS WebSocket...', 'info');
+    let isConnected = false;
+
     try {
       await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
+      isConnected = true;
       sendLog('Успешное подключение!', 'success');
     } catch (e) {
-      sendLog('OBS не отвечает. Пробуем запустить...', 'warn');
+      sendLog('OBS не отвечает. Пытаемся запустить процесс...', 'warn');
+      
       const isLaunched = await launchOBS(customPath, sendLog);
       if (isLaunched) {
-        try {
-          await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
-        } catch (retryError) { throw new Error('Не удалось подключиться.'); }
-      } else { throw new Error('Автозапуск не удался.'); }
+        sendLog('Ожидание загрузки плагинов OBS (до 15 сек)...', 'info');
+        
+        for (let i = 0; i < 5; i++) {
+          try {
+            await delay(3000);
+            sendLog(`Попытка подключения ${i + 1}/5...`, 'info');
+            await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 });
+            isConnected = true;
+            sendLog('Успешное подключение после запуска!', 'success');
+            break; 
+          } catch (retryError) {}
+        }
+      }
+    }
+    
+    if (!isConnected) {
+      throw new Error('Убедитесь, что в OBS -> Инструменты -> Настройки WebSocket -> Порт: 4455 и СНЯТА галочка "Аутентификация"!');
     }
     
     await setupScenes(sendLog, portHttp);
     await obs.disconnect();
     return { status: 'ok' };
+    
   } catch (error) {
     sendLog(error.message, 'error');
     return { status: 'error', message: error.message };
@@ -278,12 +299,23 @@ async function exportLayout(sendLog) {
         const { sceneItems } = await obs.call('GetSceneItemList', { sceneName });
         for (const item of sceneItems) {
           if (item.sourceName === '⚙️ [Ядро] Звуки и Системы') continue;
+          
           const { sceneItemTransform } = await obs.call('GetSceneItemTransform', { sceneName, sceneItemId: item.sceneItemId });
-          layout[sceneName][item.sourceName] = {
-            index: item.sceneItemIndex, positionX: Math.round(sceneItemTransform.positionX),
+          
+          const exportItem = {
+            index: item.sceneItemIndex,
+            positionX: Math.round(sceneItemTransform.positionX),
             positionY: Math.round(sceneItemTransform.positionY),
-            scaleX: Number(sceneItemTransform.scaleX.toFixed(2)), scaleY: Number(sceneItemTransform.scaleY.toFixed(2))
+            scaleX: Number(sceneItemTransform.scaleX.toFixed(2)),
+            scaleY: Number(sceneItemTransform.scaleY.toFixed(2))
           };
+
+          if (sceneItemTransform.cropTop) exportItem.cropTop = sceneItemTransform.cropTop;
+          if (sceneItemTransform.cropBottom) exportItem.cropBottom = sceneItemTransform.cropBottom;
+          if (sceneItemTransform.cropLeft) exportItem.cropLeft = sceneItemTransform.cropLeft;
+          if (sceneItemTransform.cropRight) exportItem.cropRight = sceneItemTransform.cropRight;
+
+          layout[sceneName][item.sourceName] = exportItem;
         }
       } catch (err) { sendLog(`Сцена ${sceneName} не найдена или пуста.`, 'warn'); }
     }

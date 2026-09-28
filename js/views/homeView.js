@@ -5,13 +5,9 @@ function escapeHtml(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
 }
 
-function cleanVer(v) {
-  if (!v) return '1.0.0';
-  return v.replace(/^v+/, '');
+function cleanVer(v) { 
+  return v ? v.replace(/^v+/, '') : '1.0.0'; 
 }
-
-const syncIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>`;
-const boxIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
 
 function renderUpdateCardHtml(upd, isEnvOK) {
   const current = cleanVer(upd.currentVersion);
@@ -22,7 +18,7 @@ function renderUpdateCardHtml(upd, isEnvOK) {
       <div class="d-flex justify-between align-center">
         <div class="d-flex align-center gap-md">
           <div class="update-icon-wrapper">
-            ${upd.hasUpdate ? boxIcon : syncIcon}
+            ${upd.hasUpdate ? icons.box() : icons.sync()}
           </div>
           <div>
             <h3 class="text-lg text-bold mb-xs d-flex align-center gap-sm">
@@ -40,7 +36,7 @@ function renderUpdateCardHtml(upd, isEnvOK) {
                 ${upd.isUpdating ? 'Установка...' : '⚡ Обновить виджеты'}
                </button>`
             : `<button id="btn-check-update" class="btn btn-secondary" ${upd.isChecking || !isEnvOK ? 'disabled' : ''}>
-                <span class="${upd.isChecking ? 'spin-anim' : ''} d-flex align-center gap-sm">${syncIcon} ${upd.isChecking ? 'Проверка...' : 'Проверить'}</span>
+                <span class="${upd.isChecking ? 'spin-anim' : ''} d-flex align-center gap-sm">${icons.sync()} ${upd.isChecking ? 'Проверка...' : 'Проверить'}</span>
                </button>`
           }
         </div>
@@ -68,8 +64,9 @@ export const HomeView = {
   _clearHandler: null,
   _lastUpdateStateStr: '',
 
-  render: (state) => {
+  render: (state, params) => {
     HomeView._renderedLogsCount = state.logs.length;
+    const logFilter = params?.logFilter || state.logFilter;
     const isBtnDisabled = state.isProcessing || !state.isElectronEnv;
     const btnText = state.isProcessing ? 'Инициализация...' : 'Авто-настройка OBS';
     
@@ -83,12 +80,10 @@ export const HomeView = {
         <p class="view-subtitle">Мониторинг систем, оверлеев и управление сценами.</p>
       </header>
 
-      <!-- РЕАКТИВНЫЙ СЛОТ ЦЕНТРА ОБНОВЛЕНИЙ -->
       <div id="update-card-slot">
         ${renderUpdateCardHtml(state.updateInfo, state.isElectronEnv)}
       </div>
       
-      <!-- Статус-панели -->
       <div class="d-flex gap-md mb-md flex-wrap">
         <div class="card flex-1" style="margin-bottom: 0;">
           <div class="text-muted text-sm mb-xs text-bold">СТАТУС OBS STUDIO</div>
@@ -104,7 +99,6 @@ export const HomeView = {
         </div>
       </div>
 
-      <!-- Главная кнопка -->
       <section class="card d-flex justify-between align-center mb-lg" style="border-color: var(--accent-glow); box-shadow: 0 4px 30px rgba(145, 70, 255, 0.1);">
         <div>
           <h3 class="text-lg mb-xs d-flex align-center gap-sm">${icons.obs()} Master Scene Architecture</h3>
@@ -117,17 +111,16 @@ export const HomeView = {
         </button>
       </section>
 
-      <!-- Терминал -->
       <section>
         <div class="d-flex justify-between align-center mb-sm">
           <h3 class="text-md text-bold d-flex align-center gap-sm" style="margin: 0;">${icons.search()} Журнал событий</h3>
           <div class="d-flex gap-sm">
-            <select id="log-filter" class="text-input" style="width: 140px; padding: 6px 12px;">
-              <option value="all" ${state.logFilter === 'all' ? 'selected' : ''}>Все логи</option>
-              <option value="info" ${state.logFilter === 'info' ? 'selected' : ''}>Инфо</option>
-              <option value="success" ${state.logFilter === 'success' ? 'selected' : ''}>Успех</option>
-              <option value="warn" ${state.logFilter === 'warn' ? 'selected' : ''}>Варнинги</option>
-              <option value="error" ${state.logFilter === 'error' ? 'selected' : ''}>Ошибки</option>
+            <select id="log-filter" class="form-input" style="width: 140px; padding: 6px 12px;">
+              <option value="all" ${logFilter === 'all' ? 'selected' : ''}>Все логи</option>
+              <option value="info" ${logFilter === 'info' ? 'selected' : ''}>Инфо</option>
+              <option value="success" ${logFilter === 'success' ? 'selected' : ''}>Успех</option>
+              <option value="warn" ${logFilter === 'warn' ? 'selected' : ''}>Варнинги</option>
+              <option value="error" ${logFilter === 'error' ? 'selected' : ''}>Ошибки</option>
             </select>
             <button id="btn-clear-logs" class="btn btn-danger" style="padding: 6px 12px;">${icons.trash()} Очистить</button>
           </div>
@@ -135,7 +128,7 @@ export const HomeView = {
         <div class="terminal" id="terminal-box">
           ${state.logs.length === 0 ? '<span class="log-time" id="log-placeholder">Система готова. Ожидание действий...</span>' : ''}
           ${state.logs.map(log => `
-            <div class="log-entry ${state.logFilter !== 'all' && log.type !== state.logFilter ? 'hidden' : ''}" data-type="${log.type}">
+            <div class="log-entry ${logFilter !== 'all' && log.type !== logFilter ? 'hidden' : ''}" data-type="${log.type}">
               <span class="log-time">[${log.time}]</span>
               <span class="log-msg-${log.type}">${escapeHtml(log.message)}</span>
             </div>
@@ -143,6 +136,23 @@ export const HomeView = {
         </div>
       </section>
     `;
+  },
+
+  onParamsChange: (params, state) => {
+    if (params.logFilter && state.logFilter !== params.logFilter) {
+      store.setState({ logFilter: params.logFilter });
+      const terminalBox = document.getElementById('terminal-box');
+      if (terminalBox) {
+        terminalBox.querySelectorAll('.log-entry').forEach(entry => {
+          if (params.logFilter === 'all' || entry.getAttribute('data-type') === params.logFilter) {
+            entry.classList.remove('hidden');
+          } else {
+            entry.classList.add('hidden');
+          }
+        });
+        terminalBox.scrollTop = terminalBox.scrollHeight;
+      }
+    }
   },
 
   _bindUpdateCardEvents: (state) => {
@@ -208,17 +218,10 @@ export const HomeView = {
     if (terminalBox) terminalBox.scrollTop = terminalBox.scrollHeight;
 
     HomeView._filterHandler = (e) => {
-      const filter = e.target.value;
-      store.setState({ logFilter: filter });
-      const entries = terminalBox.querySelectorAll('.log-entry');
-      entries.forEach(entry => {
-        if (filter === 'all' || entry.getAttribute('data-type') === filter) {
-          entry.classList.remove('hidden');
-        } else {
-          entry.classList.add('hidden');
-        }
-      });
-      terminalBox.scrollTop = terminalBox.scrollHeight;
+      const hashBase = window.location.hash.split('?')[0];
+      const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      searchParams.set('logFilter', e.target.value);
+      window.location.hash = `${hashBase}?${searchParams.toString()}`;
     };
     if (logFilter) logFilter.addEventListener('change', HomeView._filterHandler);
 
@@ -240,7 +243,6 @@ export const HomeView = {
     if (btnSetup && state.isElectronEnv) btnSetup.addEventListener('click', HomeView._setupHandler);
 
     HomeView._unsubStore = store.subscribe((newState) => {
-      // 1. РЕАКТИВНОЕ ОБНОВЛЕНИЕ КАРТОЧКИ ОБНОВЛЕНИЯ
       const currentUpdateStr = JSON.stringify(newState.updateInfo);
       if (currentUpdateStr !== HomeView._lastUpdateStateStr) {
         HomeView._lastUpdateStateStr = currentUpdateStr;
@@ -251,7 +253,6 @@ export const HomeView = {
         }
       }
 
-      // 2. ЖУРНАЛ ЛОГОВ
       if (terminalBox) {
         if (newState.logs.length === 0 && HomeView._renderedLogsCount > 0) {
           terminalBox.innerHTML = '<span class="log-time" id="log-placeholder">Журнал очищен...</span>';
