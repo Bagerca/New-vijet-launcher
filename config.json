@@ -26,15 +26,15 @@
       "accentColor": "#ff4d85"
     },
     "particles": {
-      "enabled": true,
-      "count": 35,
-      "distance": 100,
+      "enabled": false,
+      "count": 30,
+      "distance": 80,
       "speed": 0.2,
-      "color": "#ff4d85"
+      "color": "#ff007f"
     },
     "deaths": {
-      "enabled": true,
-      "deathsCount": 4,
+      "enabled": false,
+      "deathsCount": 0,
       "color": "#ff0050"
     },
     "emotes": {
@@ -54,11 +54,11 @@
       "bgColor": "#ffffff",
       "bgOpacity": 95,
       "textColor": "#2c2c2e",
-      "fontSize": 15
+      "fontSize": 20
     },
     "player": {
       "videoUrl": "",
-      "volume": 30
+      "volume": 19
     },
     "ticker": {
       "isActive": true,

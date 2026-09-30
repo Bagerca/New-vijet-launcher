@@ -3,10 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <title>TTS Widget</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app"></div>
-  <script src="/shared/tmi.min.js"></script>
+  
+  <div id="tts-container" class="hidden">
+      <div class="tts-icon">🎙️</div>
+      <div class="tts-info">
+          <span class="tts-title">Озвучивает</span>
+          <span id="tts-user" class="tts-user">Никнейм</span>
+      </div>
+      <div class="tts-wave">
+          <div class="tts-bar"></div>
+          <div class="tts-bar"></div>
+          <div class="tts-bar"></div>
+      </div>
+  </div>
+
+  <script src="../shared/tmi.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

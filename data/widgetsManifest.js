@@ -122,19 +122,19 @@ export const widgetsManifest = [
     title: "💬 Виджет Twitch Чата",
     description: "Киберпанк чат с плавной анимацией.",
     controls: [
-      { key: "bgColor", label: "Цвет фона", type: "color", default: "#101218", cmd: "!chatbg" },
-      { key: "bgOpacity", label: "Прозрачность фона (%)", type: "range", default: 85, cmd: "!chatop" },
-      { key: "textColor", label: "Цвет текста", type: "color", default: "#ffffff", cmd: "!chatc" },
-      { key: "fontSize", label: "Размер шрифта (px)", type: "number", default: 16, cmd: "!chatsz" }
+      { key: "bgColor", label: "Цвет фона", type: "color", default: "#ffffff", cmd: "!chatbg" },
+      { key: "bgOpacity", label: "Прозрачность фона (%)", type: "range", default: 95, cmd: "!chatop" },
+      { key: "textColor", label: "Цвет текста", type: "color", default: "#2c2c2e", cmd: "!chatc" },
+      { key: "fontSize", label: "Размер шрифта (px)", type: "number", default: 20, cmd: "!chatsz" }
     ]
   },
   {
     id: "player",
     category: "media",
     title: "📺 Умный Медиаплеер (YouTube)",
-    description: "Запуск видео через чат-команды (!play).",
+    description: "Запуск видео через чат-команды (!play / !sr).",
     controls: [
-      { key: "videoUrl", label: "Прямой запуск (Ссылка на YouTube)", type: "text", default: "", cmd: "!play" },
+      { key: "videoUrl", label: "Прямой запуск (Вне очереди)", type: "text", default: "", cmd: "!forceplay" },
       { key: "volume", label: "Громкость (%)", type: "range", default: 30, cmd: "!vol" }
     ]
   },
@@ -191,7 +191,7 @@ export const widgetsManifest = [
     title: "🎙️ Озвучка чата (TTS)",
     description: "Синтез речи (робот) и неоновый эквалайзер.",
     controls: [
-      { key: "enabled", label: "Включить TTS", type: "checkbox", default: true, cmd: "!tts" },
+      { key: "enabled", label: "Включить TTS", type: "checkbox", default: true, cmd: "!ttson" },
       { key: "volume", label: "Громкость (%)", type: "range", default: 100, cmd: "!ttsvol" },
       { key: "maxLength", label: "Макс. символов", type: "number", default: 150, cmd: "!ttsmax" },
       { key: "customVoices", label: "Кастомные голоса (JSON)", type: "textarea", default: '{"bagercaa":{"pitch":0.2,"rate":0.8}}', cmd: "!ttsvoice" }

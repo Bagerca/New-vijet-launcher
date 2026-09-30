@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+    
+body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; background: transparent; font-family: 'Montserrat', sans-serif;
+}
+
+#tts-container {
+    position: absolute; 
+    bottom: 120px; 
+    right: 40px; 
+    display: flex; align-items: center; gap: 15px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.85) 100%);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-left: 4px solid var(--tts-accent, #FF4477);
+    border-radius: 16px; padding: 12px 20px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(255, 68, 119, 0.15);
+    z-index: 40; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: right center;
+}
+
+#tts-container.hidden { display: none; }
+
+.tts-icon { font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
+.tts-info { display: flex; flex-direction: column; }
+.tts-title { font-size: 11px; color: rgba(0,0,0,0.5); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.tts-user { font-size: 16px; color: #1a1a1a; font-weight: 900; letter-spacing: 0.5px; }
+
+.tts-wave { display: flex; align-items: flex-end; gap: 4px; height: 20px; margin-left: 5px; }
+.tts-bar { 
+    width: 4px; background: var(--tts-accent, #FF4477); border-radius: 2px; height: 15%; 
+    transition: height 0.08s ease-out, box-shadow 0.08s ease-out; will-change: height;
+}
+.tts-bar.active-spike { box-shadow: 0 0 10px rgba(255, 68, 119, 0.8); }
+
+.tts-in { animation: ttsSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.tts-out { animation: ttsSlideOut 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards; }
+
+@keyframes ttsSlideIn { 
+    0% { opacity: 0; transform: translateX(50px) scale(0.9); } 
+    100% { opacity: 1; transform: translateX(0) scale(1); } 
+}
+@keyframes ttsSlideOut { 
+    0% { opacity: 1; transform: translateX(0) scale(1); } 
+    100% { opacity: 0; transform: translateX(50px) scale(0.9); } 
+}

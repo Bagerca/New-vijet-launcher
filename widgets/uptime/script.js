@@ -1,3 +1,5 @@
+import { WidgetCore } from '../shared/WidgetCore.js';
+
 const AppUptime = {
     container: document.getElementById('uptime-container'),
     valueEl: document.getElementById('uptime-value'),
@@ -12,34 +14,20 @@ const AppUptime = {
     twitchChannel: "",
 
     init: function() {
-        this.connectWS();
         setInterval(() => this.fetchStreamStatus(), 30000);
         this.timerInterval = setInterval(() => this.tick(), 1000);
     },
 
-    connectWS: function() {
-        const ws = new WebSocket('ws://localhost:42069');
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.event === 'CONFIG_UPDATED') {
-                    this.twitchChannel = message.data.twitchChannel;
-                    this.applyConfig(message.data.widgets?.uptime || {});
-                }
-            } catch (e) {}
-        };
-        ws.onclose = () => setTimeout(() => this.connectWS(), 3000);
-    },
+    applyConfig: function(config, twitchChannel) {
+        this.twitchChannel = twitchChannel;
+        if (!config) return;
 
-    applyConfig: function(config) {
-        // ИСПРАВЛЕНО: безопасная проверка строки "false"
         const isOff = config.isActive === false || String(config.isActive) === 'false';
         if (isOff) {
             this.container.classList.add('hidden');
             return;
         }
 
-        // ИСПРАВЛЕНО: безопасная проверка строки "true"
         if (config.testMode === true || String(config.testMode) === 'true') {
             this.enableTestMode();
         } else {
@@ -98,6 +86,7 @@ const AppUptime = {
     enableTestMode: function() {
         this.isTestMode = true;
         this.isLive = true;
+        // Эмулируем запуск стрима "1 час 23 минуты назад"
         this.startTime = Date.now() - (1 * 3600 + 23 * 60 + 45) * 1000;
         this.setUIState(true);
         this.container.classList.remove('hidden');
@@ -124,11 +113,35 @@ const AppUptime = {
     }
 };
 
-fetch('http://localhost:42069/api/config')
-  .then(res => res.json())
-  .then(config => {
-      AppUptime.twitchChannel = config.twitchChannel;
-      AppUptime.applyConfig(config.widgets?.uptime || {});
-      AppUptime.init();
-  })
-  .catch(() => AppUptime.init());
+AppUptime.init();
+
+// ==========================================
+// ИНИЦИАЛИЗАЦИЯ ЧЕРЕЗ ЯДРО
+// ==========================================
+WidgetCore.init({
+    onConfigUpdate: (config) => {
+        if (config.widgets?.uptime) AppUptime.applyConfig(config.widgets.uptime, config.twitchChannel);
+    },
+
+    onTwitchCommand: (cmd, args) => {
+        let conf = { ...(WidgetCore.globalConfig.widgets.uptime || {}) };
+        let changed = false;
+
+        if (cmd === '!uptime') {
+            const arg = args[0] ? args[0].toLowerCase() : null;
+            if (arg === 'on') { conf.isActive = true; changed = true; }
+            else if (arg === 'off') { conf.isActive = false; changed = true; }
+            else { conf.isActive = !(conf.isActive === true || String(conf.isActive) === 'true'); changed = true; }
+        }
+        else if (cmd === '!uptimetest') {
+            const arg = args[0] ? args[0].toLowerCase() : null;
+            if (arg === 'on') { conf.testMode = true; changed = true; }
+            else if (arg === 'off') { conf.testMode = false; changed = true; }
+            else { conf.testMode = !(conf.testMode === true || String(conf.testMode) === 'true'); changed = true; }
+        }
+
+        if (changed) {
+            WidgetCore.updateWidgetConfig('uptime', conf);
+        }
+    }
+});

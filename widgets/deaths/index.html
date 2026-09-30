@@ -8,12 +8,20 @@
 <body>
   
   <div id="deaths-container" class="hidden">
-      <div id="deaths-combo" class="hidden"></div>
-      <div class="deaths-title">DEATHS</div>
-      <div id="deaths-count">0</div>
+      <!-- Абсолютно позиционированное комбо (появляется сверху) -->
+      <div id="deaths-combo"></div>
+      
+      <!-- Блок, который плавно отъезжает вниз -->
+      <div id="deaths-mover">
+          <!-- Блок, который отвечает за тряску от урона -->
+          <div id="deaths-shaker">
+              <div class="deaths-title">DEATHS</div>
+              <div id="deaths-count">0</div>
+          </div>
+      </div>
   </div>
 
-  <script src="/shared/tmi.min.js"></script>
+  <script src="../shared/tmi.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

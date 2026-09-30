@@ -1,7 +1,4 @@
-let currentClient = null;
-let currentChannel = null;
-let globalWs = null;
-let globalConfigData = null;
+import { WidgetCore } from '../shared/WidgetCore.js';
 
 const AppEmotes = {
     container: document.getElementById('emotes-container'),
@@ -11,65 +8,24 @@ const AppEmotes = {
     MAX_GLOBAL_EMOTES: 100, 
     maxSpawnPerMsg: 20,
 
-    init: function() {
-        // Подключаем слушатели LocalStorage для Live Preview тестов
-        fetch('/api/config')
-          .then(res => res.json())
-          .then(config => {
-              globalConfigData = config;
-              this.applyConfig(config.widgets?.emotes || {});
-              initTMI(config);
-              connectWS();
-          })
-          .catch(() => {
-              const saved = localStorage.getItem('stream_pack_config');
-              if (saved) {
-                  const conf = JSON.parse(saved);
-                  this.applyConfig(conf.widgets?.emotes || {});
-              }
-              connectWS();
-          });
-
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'stream_pack_config' && e.newValue) {
-                const conf = JSON.parse(e.newValue);
-                this.applyConfig(conf.widgets?.emotes || {});
-            }
-            if (e.key === 'stream_pack_action' && e.newValue) {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    if (data.action === 'TEST_EMOTES') {
-                        // Фейковый объект с популярными ID смайлов для теста
-                        const fakeEmotes = { "25": ["0-4", "6-10"], "30259": ["12-16"], "86": ["18-22"] };
-                        this.spawn(fakeEmotes);
-                    }
-                } catch(err){}
-            }
-        });
-    },
-
     applyConfig: function(config) {
         if (config.mode) this.mode = config.mode;
         if (config.enabled !== undefined) this.enabled = String(config.enabled) === 'true';
         if (config.maxEmotes) this.maxSpawnPerMsg = parseInt(config.maxEmotes) || 20;
     },
 
-    spawn: function(emotesData) {
-        if (!this.enabled || !emotesData || !this.container) return;
+    spawn: function(emotesList) {
+        if (!this.enabled || !emotesList || emotesList.length === 0 || !this.container) return;
         if (this.activeEmotesCount >= this.MAX_GLOBAL_EMOTES) return;
-
-        let emoteIds = Object.keys(emotesData);
-        if (emoteIds.length === 0) return;
 
         let spawned = 0;
         let delayIndex = 0;
         const fragment = document.createDocumentFragment();
 
-        for (let id of emoteIds) {
-            let count = emotesData[id].length; 
-            for (let i = 0; i < count; i++) {
+        for (let emote of emotesList) {
+            for (let i = 0; i < emote.count; i++) {
                 if (spawned >= this.maxSpawnPerMsg || this.activeEmotesCount >= this.MAX_GLOBAL_EMOTES) break;
-                this.createEmoteDOM(id, delayIndex, fragment);
+                this.createEmoteDOM(emote.url, delayIndex, fragment);
                 spawned++;
                 delayIndex++;
             }
@@ -79,12 +35,11 @@ const AppEmotes = {
         this.container.appendChild(fragment);
     },
 
-    createEmoteDOM: function(id, delayIndex, fragment) {
+    createEmoteDOM: function(url, delayIndex, fragment) {
         this.activeEmotesCount++;
-        const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/3.0`;
         const wrap = document.createElement('div');
         const img = document.createElement('img');
-        img.src = emoteUrl;
+        img.src = url;
 
         const staggerDelay = delayIndex * (0.05 + Math.random() * 0.03); 
         let fallBackDestroyTime = 0;
@@ -157,62 +112,47 @@ const AppEmotes = {
     }
 };
 
-async function initTMI(config) {
-    if (!config.twitchChannel) return;
-    const channel = config.twitchChannel.replace(/[@#]/g, '').trim().toLowerCase();
-    
-    if (currentChannel === channel) return;
-    currentChannel = channel;
-    
-    if (currentClient) await currentClient.disconnect();
-    
-    currentClient = new tmi.Client({ channels: [channel] });
-    
-    currentClient.on('message', (chan, tags, message) => {
-        if (tags.emotes) {
-            AppEmotes.spawn(tags.emotes);
-        }
+// ==========================================
+// ПОДКЛЮЧЕНИЕ ЯДРА WIDGET CORE
+// ==========================================
+WidgetCore.init({
+    onConfigUpdate: (config) => {
+        if (config.widgets?.emotes) AppEmotes.applyConfig(config.widgets.emotes);
+    },
 
-        const isMod = tags.mod || (tags.badges && tags.badges.broadcaster === '1');
-        const msgLow = message.trim().toLowerCase();
-        
-        if (isMod && (msgLow.startsWith('!emotes ') || msgLow.startsWith('!смайлы '))) {
-            const arg = msgLow.split(' ')[1];
-            if (globalWs && globalWs.readyState === WebSocket.OPEN && globalConfigData) {
-                if (!globalConfigData.widgets.emotes) globalConfigData.widgets.emotes = {};
-                
-                let changed = false;
-                if (['bubble', 'fountain'].includes(arg)) {
-                    globalConfigData.widgets.emotes.mode = arg;
-                    changed = true;
-                } else if (['on', 'off'].includes(arg)) {
-                    globalConfigData.widgets.emotes.enabled = (arg === 'on') ? 'true' : 'false';
-                    changed = true;
-                }
-                
-                if (changed) globalWs.send(JSON.stringify({ event: 'UPDATE_CONFIG', data: globalConfigData }));
+    onTwitchCommand: (cmd, args) => {
+        if (cmd === '!emotes' || cmd === '!смайлы') {
+            const arg = args[0];
+            let newEmotesConf = { ...(WidgetCore.globalConfig.widgets.emotes || {}) };
+            let changed = false;
+
+            if (['bubble', 'fountain'].includes(arg)) {
+                newEmotesConf.mode = arg;
+                changed = true;
+            } else if (['on', 'off'].includes(arg)) {
+                newEmotesConf.enabled = (arg === 'on') ? 'true' : 'false';
+                changed = true;
+            }
+            
+            if (changed) {
+                WidgetCore.updateWidgetConfig('emotes', newEmotesConf);
             }
         }
-    });
-    
-    await currentClient.connect();
-}
+    },
 
-function connectWS() {
-    globalWs = new WebSocket('ws://localhost:42069');
-    
-    globalWs.onmessage = (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            if (message.event === 'CONFIG_UPDATED') {
-                globalConfigData = message.data;
-                initTMI(message.data);
-                if (message.data.widgets?.emotes) AppEmotes.applyConfig(message.data.widgets.emotes);
-            }
-        } catch (e) {}
-    };
-    
-    globalWs.onclose = () => setTimeout(connectWS, 3000);
-}
+    onTwitchMessage: (tags, message) => {
+        // Ядро само вытаскивает все нативные и сторонние смайлы в готовый массив [{ url, count }]
+        const extractedEmotes = WidgetCore.getEmotesFromMessage(message, tags.emotes);
+        AppEmotes.spawn(extractedEmotes);
+    },
 
-AppEmotes.init();
+    onWidgetAction: (action, payload) => {
+        if (action === 'TEST_EMOTES') {
+            // Тестовые смайлы из лаунчера
+            AppEmotes.spawn([
+                { url: 'https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/3.0', count: 2 },
+                { url: 'https://cdn.7tv.app/emote/60ae3e54259ac5a73e56c426/2x.webp', count: 1 }
+            ]);
+        }
+    }
+});
