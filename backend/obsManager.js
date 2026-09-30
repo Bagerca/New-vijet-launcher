@@ -299,13 +299,13 @@ async function runObsSetup(customPath, sendLog, portHttp) {
 
 async function exportLayout(sendLog) {
   try {
-    sendLog('Подключение к OBS для экспорта координат и диагностики...', 'info');
+    sendLog('Подключение к OBS для глубокого экспорта и диагностики...', 'info');
     try { await obs.call('GetVersion'); } catch (e) { await obs.connect('ws://127.0.0.1:4455', undefined, { rpcVersion: 1 }); }
 
     const targetScenes = ['🔴 [Сцена] Начало', '🗣 [Сцена] Общение', '🎮 [Сцена] Игра', '👋 [Сцена] Конец'];
     const layout = {};
     
-    // 1. Сбор координат всех виджетов и нативных слоев
+    // 1. Сбор координат виджетов
     for (const sceneName of targetScenes) {
       layout[sceneName] = {};
       try {
@@ -333,63 +333,68 @@ async function exportLayout(sendLog) {
       } catch (err) { sendLog(`Сцена ${sceneName} не найдена или пуста.`, 'warn'); }
     }
 
-    // 2. Улучшенная диагностика (Глобальное аудио + Обычные источники + Логирование ошибок)
+    // 2. ГЛУБОКАЯ ДИАГНОСТИКА: Настройки устройств и фильтров
     const diagnostics = { globalAudio: [], localAudio: [], videoInputs: [], rawErrors: [] };
     
-    // А) ГЛОБАЛЬНЫЕ ИСТОЧНИКИ (Настройки -> Аудио -> Mic/Aux / Desktop)
+    // Функция для вытаскивания всех параметров фильтров
+    const getDetailedFilters = async (sourceName) => {
+      let detailedFilters = [];
+      try {
+        const fList = await obs.call('GetSourceFilterList', { sourceName });
+        for (const fl of fList.filters) {
+          let settings = {};
+          try {
+            const fData = await obs.call('GetSourceFilter', { sourceName, filterName: fl.filterName });
+            settings = fData.filterSettings;
+          } catch(e) {}
+          detailedFilters.push({ name: fl.filterName, kind: fl.filterKind, enabled: fl.filterEnabled, settings });
+        }
+      } catch(e) {}
+      return detailedFilters;
+    };
+
+    // А) ГЛОБАЛЬНЫЕ ИСТОЧНИКИ
     try { 
       const specialInputs = await obs.call('GetSpecialInputs'); 
       for (const [key, sourceName] of Object.entries(specialInputs)) {
         if (!sourceName) continue;
-        let volDb = 0, muted = false, filters = [], errors = [];
+        let volDb = 0, muted = false, settings = {};
         
-        try { const v = await obs.call('GetInputVolume', { inputName: sourceName }); volDb = v.inputVolumeDb; } catch(e) { errors.push(`Volume: ${e.message}`); }
-        try { const m = await obs.call('GetInputMute', { inputName: sourceName }); muted = m.inputMuted; } catch(e) { errors.push(`Mute: ${e.message}`); }
-        try { 
-          const f = await obs.call('GetSourceFilterList', { sourceName: sourceName }); 
-          filters = f.filters.map(fl => ({ name: fl.filterName, kind: fl.filterKind, enabled: fl.filterEnabled })); 
-        } catch(e) { errors.push(`Filters: ${e.message}`); }
-
-        diagnostics.globalAudio.push({ type: key, name: sourceName, volumeDb: Number(volDb.toFixed(2)), muted, filters, errors: errors.length ? errors : undefined });
+        try { const v = await obs.call('GetInputVolume', { inputName: sourceName }); volDb = v.inputVolumeDb; } catch(e) {}
+        try { const m = await obs.call('GetInputMute', { inputName: sourceName }); muted = m.inputMuted; } catch(e) {}
+        try { const s = await obs.call('GetInputSettings', { inputName: sourceName }); settings = s.inputSettings; } catch(e) {}
+        
+        const filters = await getDetailedFilters(sourceName);
+        diagnostics.globalAudio.push({ type: key, name: sourceName, volumeDb: Number(volDb.toFixed(2)), muted, settings, filters });
       }
     } catch(e) { diagnostics.rawErrors.push(`SpecialInputs: ${e.message}`); }
     
-    // Б) ЛОКАЛЬНЫЕ ИСТОЧНИКИ (Камеры, Микрофоны в сценах)
+    // Б) ЛОКАЛЬНЫЕ ИСТОЧНИКИ (Камеры, Микрофоны)
     try {
       const { inputs } = await obs.call('GetInputList');
       for (const input of inputs) {
         const kind = input.unversionedInputKind || input.inputKind;
         const sourceName = input.inputName;
-        let errors = [];
         
-        // Аудио источники
         if (['wasapi_input_capture','wasapi_output_capture','coreaudio_input_capture','pulse_input_capture','alsa_input_capture'].includes(kind)) {
-            let volDb = 0, muted = false, filters = [];
-            try { const v = await obs.call('GetInputVolume', { inputName: sourceName }); volDb = v.inputVolumeDb; } catch(e) { errors.push(`Volume: ${e.message}`); }
-            try { const m = await obs.call('GetInputMute', { inputName: sourceName }); muted = m.inputMuted; } catch(e) { errors.push(`Mute: ${e.message}`); }
-            try { 
-                const f = await obs.call('GetSourceFilterList', { sourceName: sourceName }); 
-                filters = f.filters.map(fl => ({ name: fl.filterName, kind: fl.filterKind, enabled: fl.filterEnabled })); 
-            } catch(e) { errors.push(`Filters: ${e.message}`); }
+            let volDb = 0, muted = false, settings = {};
+            try { const v = await obs.call('GetInputVolume', { inputName: sourceName }); volDb = v.inputVolumeDb; } catch(e) {}
+            try { const m = await obs.call('GetInputMute', { inputName: sourceName }); muted = m.inputMuted; } catch(e) {}
+            try { const s = await obs.call('GetInputSettings', { inputName: sourceName }); settings = s.inputSettings; } catch(e) {}
             
-            diagnostics.localAudio.push({ name: sourceName, kind, volumeDb: Number(volDb.toFixed(2)), muted, filters, errors: errors.length ? errors : undefined });
+            const filters = await getDetailedFilters(sourceName);
+            diagnostics.localAudio.push({ name: sourceName, kind, volumeDb: Number(volDb.toFixed(2)), muted, settings, filters });
         }
         
-        // Видео источники (Вебки)
         if (['dshow_input','monitor_capture','window_capture','game_capture'].includes(kind)) {
-            let filters = [];
-            try { 
-                const f = await obs.call('GetSourceFilterList', { sourceName: sourceName }); 
-                filters = f.filters.map(fl => ({ name: fl.filterName, kind: fl.filterKind, enabled: fl.filterEnabled })); 
-            } catch(e) { errors.push(`Filters: ${e.message}`); }
+            let settings = {};
+            try { const s = await obs.call('GetInputSettings', { inputName: sourceName }); settings = s.inputSettings; } catch(e) {}
             
-            diagnostics.videoInputs.push({ name: sourceName, kind, filters, errors: errors.length ? errors : undefined });
+            const filters = await getDetailedFilters(sourceName);
+            diagnostics.videoInputs.push({ name: sourceName, kind, settings, filters });
         }
       }
-    } catch(e) {
-      diagnostics.rawErrors.push(`GetInputList: ${e.message}`);
-      sendLog(`Ошибка сбора устройств: ${e.message}`, 'warn');
-    }
+    } catch(e) { diagnostics.rawErrors.push(`GetInputList: ${e.message}`); }
     
     layout["_diagnostics"] = diagnostics;
 
