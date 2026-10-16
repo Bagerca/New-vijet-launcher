@@ -1,4 +1,4 @@
-/* ФАЙЛ: widgets/player/youtube.js (Движок плеера) */
+/* ФАЙЛ: widgets/player/youtube.js */
 
 export class YouTubeWrapper {
     constructor(containerId, callbacks) {
@@ -54,20 +54,22 @@ export class YouTubeWrapper {
 
     play(track) {
         if (!this.isReady || !this.yt) return;
+        
+        // Мутим плеер ДО старта, чтобы не было скачков громкости
         try { this.yt.mute(); } catch (e) {}
         
+        // API само начнет воспроизведение (autoplay: 1)
+        // Категорически нельзя вызывать здесь playVideo(), это вызывает треск аудио-буфера!
         if (track.type === 'playlist') {
             this.yt.loadPlaylist({ list: track.id });
         } else {
-            this.yt.loadVideoById({ videoId: track.id, startSeconds: 0 });
+            this.yt.loadVideoById({ videoId: track.id });
         }
-        
-        try { this.yt.playVideo(); } catch (e) {}
     }
 
     stop() {
         if (this.isReady && this.yt && typeof this.yt.stopVideo === 'function') {
-            this.yt.stopVideo();
+            try { this.yt.stopVideo(); } catch (e) {}
         }
     }
 
@@ -75,13 +77,19 @@ export class YouTubeWrapper {
         const safeVol = Math.max(0, Math.min(100, parseInt(vol) || 30));
         if (this.isReady && this.yt && typeof this.yt.setVolume === 'function') {
             try {
-                this.yt.unMute();
                 this.yt.setVolume(safeVol);
             } catch (e) {}
         }
     }
 
-    forcePlay() {
+    unMute() {
+        if (this.isReady && this.yt && typeof this.yt.unMute === 'function') {
+            try { this.yt.unMute(); } catch(e){}
+        }
+    }
+
+    // Жесткий пинок (используется только вочдогом при зависаниях)
+    kick() {
         if (this.isReady && this.yt) {
             try {
                 this.yt.unMute();

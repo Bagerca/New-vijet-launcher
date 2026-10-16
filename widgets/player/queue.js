@@ -1,4 +1,4 @@
-/* ФАЙЛ: widgets/player/queue.js (Мозги очередей и плейлистов) */
+/* ФАЙЛ: widgets/player/queue.js */
 
 export class PlayerQueue {
     constructor(onQueueUpdateCallback) {
@@ -42,13 +42,22 @@ export class PlayerQueue {
         const wasShuffle = this.shuffleEnabled;
         this.shuffleEnabled = shuffleEnabled;
 
-        this.bgPlaylist = (urlsText || '').split('\n')
+        const newPlaylist = (urlsText || '').split('\n')
             .map(l => l.trim())
             .filter(l => l !== '')
             .map(url => this.extractData(url))
             .filter(data => data !== null);
 
-        if (wasShuffle !== this.shuffleEnabled || this.bgShuffleBag.length === 0) {
+        // Чтобы не сбрасывать текущий трек, обновляем мешок ТОЛЬКО если плейлист реально изменился
+        const oldStr = JSON.stringify(this.bgPlaylist);
+        const newStr = JSON.stringify(newPlaylist);
+
+        if (oldStr !== newStr) {
+            this.bgPlaylist = newPlaylist;
+            this.populateShuffleBag();
+        } else if (wasShuffle !== shuffleEnabled) {
+            this.populateShuffleBag();
+        } else if (this.bgShuffleBag.length === 0 && this.bgPlaylist.length > 0) {
             this.populateShuffleBag();
         }
     }

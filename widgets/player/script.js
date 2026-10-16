@@ -1,4 +1,4 @@
-/* ФАЙЛ: widgets/player/script.js (Контроллер UI и связи с ядром) */
+/* ФАЙЛ: widgets/player/script.js */
 
 import { YouTubeWrapper } from './youtube.js';
 import { PlayerQueue } from './queue.js';
@@ -6,7 +6,6 @@ import { AvatarManager } from '../shared/AvatarManager.js';
 import { icons } from '../../js/utils/icons.js';
 import { WidgetCore } from '../shared/WidgetCore.js';
 
-// Хелперы для мгновенной смены цвета
 function hexToRgb(hex) {
     let h = (hex || '#ff4d85').replace('#', '');
     if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -23,7 +22,6 @@ function applyGlobalColor(color) {
     document.documentElement.style.setProperty('--player-accent-rgb', hexToRgb(hex));
 }
 
-// Управление DOM-элементами вынесено в отдельный объект
 const UI = {
     container: document.getElementById('widget-container'),
     nameLabel: document.getElementById('requester-name'),
@@ -87,7 +85,6 @@ const UI = {
     }
 };
 
-// Главный Оркестратор
 const AppPlayer = {
     yt: null,
     queue: null,
@@ -128,32 +125,27 @@ const AppPlayer = {
         const wasEnabled = this.config.playlistEnabled;
         this.config = { ...this.config, ...pConf };
 
-        // 1. Мгновенная смена цвета
         if (this.config.accentColor) applyGlobalColor(this.config.accentColor);
 
-        // 2. Обновление списков фонового плейлиста
         if (pConf.playlistUrls !== undefined) {
             this.queue.updateBgPlaylist(pConf.playlistUrls, this.config.playlistShuffle);
         }
 
-        // 3. Логика запуска/остановки фона на лету
         if (this.config.playlistEnabled && !this.isPlaying && this.yt.isReady) {
             this.playNext();
         }
         
         if (!this.config.playlistEnabled && wasEnabled && this.nowPlaying && this.nowPlaying.isBackground) {
             this.stopPlayer();
-            if (this.queue.userQueue.length > 0) this.playNext(); // Запуск заказов, если есть
+            if (this.queue.userQueue.length > 0) this.playNext(); 
         }
         
-        // 4. Мгновенное применение громкости
         const targetVol = (this.nowPlaying && this.nowPlaying.isBackground) ? this.config.bgVolume : this.config.volume;
         this.setVolume(targetVol);
     },
 
     addTrack: function(url, user) {
         if (this.queue.add(url, user)) {
-            // Если ничего не играет ИЛИ сейчас играет фон -> прерываем фон и запускаем заказ
             if (!this.isPlaying || (this.nowPlaying && this.nowPlaying.isBackground)) {
                 this.playNext();
             }
@@ -202,10 +194,13 @@ const AppPlayer = {
             this.clearWatchdog();
             UI.setPlayingState(true);
             
-            this.yt.forcePlay();
-            this.setVolume(this.nowPlaying?.isBackground ? this.config.bgVolume : this.config.volume);
+            // Включаем звук ТОЛЬКО когда видео реально начало проигрываться
+            this.yt.unMute();
+            
+            const targetVol = this.nowPlaying?.isBackground ? this.config.bgVolume : this.config.volume;
+            this.setVolume(targetVol);
+            
             this.startProgress();
-
             this.notifyPet(true);
         } 
         else if (state === 2) { // PAUSED
@@ -232,10 +227,11 @@ const AppPlayer = {
         this.watchdogTimer = setTimeout(() => {
             const state = this.yt.getState();
             if (state !== 1) {
-                this.yt.forcePlay();
+                // Если через 6 секунд трек так и не стартанул - даем ему жесткий пинок
+                this.yt.kick(); 
                 setTimeout(() => {
                     const recheck = this.yt.getState();
-                    if (recheck !== 1 && recheck !== 3) this.playNext(); // Автоскип битого
+                    if (recheck !== 1 && recheck !== 3) this.playNext(); // Автоскип битого трека
                 }, 2000);
             }
         }, 6000);
@@ -285,7 +281,7 @@ WidgetCore.init({
             AppPlayer.queue.clearUserQueue();
             const streamerName = (config.twitchChannel || 'Стример') + ' (Панель)';
             AppPlayer.addTrack(pConf.videoUrl, streamerName);
-            WidgetCore.updateWidgetConfig('player', { videoUrl: '' }); // Очищаем поле
+            WidgetCore.updateWidgetConfig('player', { videoUrl: '' });
         }
     },
 
