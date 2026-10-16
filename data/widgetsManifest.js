@@ -8,6 +8,38 @@ const libraryOptions = Object.keys(MediaLibrary).map(key => ({
   value: key
 }));
 
+const defaultPlaylist = [
+  "https://youtu.be/I9Bjf_VmQxo?si=0ry7L1jbyp1m5S61",
+  "https://youtu.be/kErWhzq5gTc?si=_fZ0ZuAMo6FMXO8L",
+  "https://youtu.be/PACCO-0XnDU?si=Z5uH-Q5K5qC4ndfx",
+  "https://youtu.be/T24rF_x0TmQ?si=CBm8MBs9tWZKnnDY",
+  "https://youtu.be/hQC_eLX1n6g?si=FE5ZwnLWWAGiNbaP",
+  "https://youtu.be/XlAul6spLkA?si=KcpGDjI_OAfbNeU_",
+  "https://youtu.be/u61fUWCKAG4?si=Tx4tOlFXobQGlRPw",
+  "https://youtu.be/S2ujotDMluo?si=iiKjA3qc9I8j5O-l",
+  "https://youtu.be/GTm_-Ceb7KA?si=3wbO_2SQAmHbJgBg",
+  "https://youtu.be/6D_TvwBCXx0?si=FisbszAteTv-HMQ4",
+  "https://youtu.be/g3G1-z-W1vo?si=XM3Y7pgrm0VnArfU",
+  "https://youtu.be/OJXi5BvR_DU?si=W6klHWV8c6PVup8L",
+  "https://youtu.be/mNG9g1yUs0Y?si=FJo6XxI_eKB2zE50",
+  "https://youtu.be/zzhBsV6FzQo?si=ThuZnY5cOBBFr6cL",
+  "https://youtu.be/JUXM2jCxTqY?si=2-MHXtJ12Ylbipns",
+  "https://youtu.be/EheOV-WBntw?si=iy09Cu4onsFqA8cG",
+  "https://youtu.be/APIXKzYgImM?si=PO8IWHBBmn6SPADQ",
+  "https://youtu.be/IUuhdIFllok?si=SU25AV3FpTgx4m1m",
+  "https://youtu.be/knlw6kFP_RU?si=h6SS2T8h9t5j7r8z",
+  "https://youtu.be/Qp3b-RXtz4w?si=yF8JV1O4zAgVhGjm",
+  "https://youtu.be/6Ro7NubzE9A?si=pB7Ruo49_VN3ZfgI",
+  "https://youtu.be/ulHcNwK1q_U?si=qJBmDjpGapQ6y7k2",
+  "https://youtu.be/BFfRR171G7w?si=mCDXUbI_ject4_22",
+  "https://youtu.be/9Zj0JOHJR-s?si=t3JXLfC9p9m1mg1w",
+  "https://youtu.be/dnNSvR2wNSo?si=REpEeKa-WS7eDmW2",
+  "https://youtu.be/_8JdKz76ZHk?si=Rp0lGjNuA211TimY",
+  "https://youtu.be/1Wkkjboe48c?si=eBF5XWoKPC9Kb1bP",
+  "https://youtu.be/EP_htfxJXfo?si=vMD0XBiA39gpi0Xm",
+  "https://youtu.be/R4ci67fvLDM?si=kuL0tSsN0ZygYQZP"
+].join("\n");
+
 export const widgetsManifest = [
   {
     id: "frame",
@@ -132,10 +164,17 @@ export const widgetsManifest = [
     id: "player",
     category: "media",
     title: "📺 Умный Медиаплеер (YouTube)",
-    description: "Запуск видео через чат-команды (!play / !sr).",
+    description: "Запуск видео через чат-команды (!play / !sr) и фоновый плейлист.",
     controls: [
       { key: "videoUrl", label: "Прямой запуск (Вне очереди)", type: "text", default: "", cmd: "!forceplay" },
-      { key: "volume", label: "Громкость (%)", type: "range", default: 30, cmd: "!vol" }
+      { key: "accentColor", label: "Цвет акцентов", type: "color", default: "#ff4d85", cmd: "!playerc" },
+      { type: "button", label: "⏭ Скипнуть трек", action: "PLAYER_SKIP", payload: {} },
+      { type: "button", label: "⏹ Остановить плеер", action: "PLAYER_STOP", payload: {} },
+      { key: "volume", label: "Громкость заказов зрителей (%)", type: "range", default: 30, cmd: "!vol" },
+      { key: "playlistEnabled", label: "Включить фоновый плейлист", type: "checkbox", default: false, cmd: "!bgplay" },
+      { key: "playlistUrls", label: "Ссылки для фона (каждая с новой строки)", type: "textarea", default: defaultPlaylist },
+      { key: "playlistShuffle", label: "Случайный порядок (Shuffle)", type: "checkbox", default: true },
+      { key: "bgVolume", label: "Громкость фоновой музыки (%)", type: "range", default: 15 }
     ]
   },
   {
@@ -182,7 +221,8 @@ export const widgetsManifest = [
     description: "Время в эфире (автоматически парсится с Twitch).",
     controls: [
       { key: "isActive", label: "Показывать таймер", type: "checkbox", default: true, cmd: "!uptime" },
-      { key: "testMode", label: "Форсировать режим В ЭФИРЕ", type: "checkbox", default: false, cmd: "!uptimetest" }
+      { key: "testMode", label: "Форсировать режим В ЭФИРЕ", type: "checkbox", default: false, cmd: "!uptimetest" },
+      { key: "accentColor", label: "Цвет акцента", type: "color", default: "#ff0050", cmd: "!uptimec" }
     ]
   },
   {

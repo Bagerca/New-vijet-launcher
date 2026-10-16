@@ -1,3 +1,4 @@
+/* ФАЙЛ: js/store.js */
 import { widgetsManifest } from '../data/widgetsManifest.js';
 
 function isObject(item) {
@@ -137,12 +138,11 @@ export class Store {
     }
   }
 
-  // СТРОГОЕ ОБНОВЛЕНИЕ СЕРВЕРОМ:
   syncFromRemote(newConfig) {
     const mergedConfig = deepMerge({}, this.state.config, newConfig);
     if (newConfig.widgets) mergedConfig.widgets = this._sanitizeWidgetsConfig(mergedConfig.widgets);
     this.state.config = mergedConfig;
-    this.notify(); // Запускает вспышки в UI
+    this.notify(); 
   }
   
   resetWidgetToDefaults(widgetId) {
@@ -156,8 +156,22 @@ export class Store {
 
   broadcastAction(action, payload) {
     const data = { event: 'WIDGET_ACTION', action, payload, ts: Date.now() };
+    
+    // 1. Для локального предпросмотра
     try { localStorage.setItem(this.ACTION_KEY, JSON.stringify(data)); } catch(e){}
-    this.addLog(`Тестовое событие отправлено: ${action}`, 'info');
+    
+    // 2. ЖЕЛЕЗНЫЙ ПРОБРОС ДЛЯ OBS (Отправляем на локальный WebSocket)
+    if (this.state.isElectronEnv) {
+        try {
+            const ws = new WebSocket('ws://127.0.0.1:42069');
+            ws.onopen = () => {
+                ws.send(JSON.stringify(data));
+                setTimeout(() => ws.close(), 100);
+            };
+        } catch(e) {}
+    }
+    
+    this.addLog(`Выполнено действие: ${action}`, 'info');
   }
 
   addLog(message, type = 'info') {

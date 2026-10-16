@@ -32,7 +32,7 @@ function startServers() {
     console.log(`[HTTP] Запрос: ${reqUrlBase}`);
 
     if (reqUrlBase === '/api/config') {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(configManager.getConfig()));
       return;
     }
@@ -57,12 +57,20 @@ function startServers() {
       } else {
         let ext = path.extname(filePath).toLowerCase();
         let contentType = 'text/html; charset=utf-8';
-        if (ext === '.js' || ext === '.mjs') contentType = 'text/javascript; charset=utf-8';
-        else if (ext === '.css') contentType = 'text/css; charset=utf-8';
-        else if (ext === '.json') contentType = 'application/json; charset=utf-8';
-        else if (ext === '.svg') contentType = 'image/svg+xml; charset=utf-8';
+        let cacheControl = 'no-cache';
 
-        res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
+        // Кэшируем статику для мгновенной загрузки в OBS CEF (браузерном движке)
+        if (ext === '.js' || ext === '.mjs') { contentType = 'text/javascript; charset=utf-8'; cacheControl = 'public, max-age=3600'; }
+        else if (ext === '.css') { contentType = 'text/css; charset=utf-8'; cacheControl = 'public, max-age=3600'; }
+        else if (ext === '.json') { contentType = 'application/json; charset=utf-8'; }
+        else if (ext === '.svg') { contentType = 'image/svg+xml; charset=utf-8'; cacheControl = 'public, max-age=86400'; }
+        else if (['.mp3', '.webp', '.png', '.jpg'].includes(ext)) { cacheControl = 'public, max-age=86400'; }
+
+        res.writeHead(200, { 
+          'Content-Type': contentType, 
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': cacheControl
+        });
         res.end(content, 'utf-8');
       }
     });

@@ -118,29 +118,52 @@ export const WidgetCore = {
     // ВНУТРЕННИЕ МЕТОДЫ (PRIVATE)
     // ==========================================
     async _loadThirdPartyEmotes(channelLogin) {
+        const cacheKey = `uso_emotes_cache_${channelLogin}`;
+        
+        // Попытка взять смайлы из локального кэша диска (время жизни 6 часов)
+        // Это предотвращает Rate Limit шторм при инициализации виджетов в OBS
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                const parsed = JSON.parse(cachedData);
+                if (Date.now() - parsed.ts < 6 * 3600 * 1000) {
+                    this.thirdPartyEmotes = new Map(parsed.emotes);
+                    console.log('[WidgetCore] Сторонние смайлы успешно загружены из КЭША.');
+                    return;
+                }
+            }
+        } catch (e) {}
+
         this.thirdPartyEmotes.clear();
+        console.log('[WidgetCore] Кэш смайлов устарел или пуст. Парсим внешние API...');
+
         try {
             const ivrRes = await fetch(`https://api.ivr.fi/v2/twitch/user?login=${channelLogin}`);
             const ivrData = await ivrRes.json();
             const twitchId = ivrData[0]?.id;
             if (!twitchId) return;
 
-            // 7TV Global & Channel
-            fetch('https://7tv.io/v3/emote-sets/global').then(r=>r.json()).then(d => d.emotes?.forEach(e => this.thirdPartyEmotes.set(e.name, `https://cdn.7tv.app/emote/${e.id}/2x.webp`))).catch(()=>{});
-            fetch(`https://7tv.io/v3/users/twitch/${twitchId}`).then(r=>r.json()).then(d => d.emote_set?.emotes?.forEach(e => this.thirdPartyEmotes.set(e.name, `https://cdn.7tv.app/emote/${e.id}/2x.webp`))).catch(()=>{});
+            // Используем Promise.allSettled чтобы ошибка одного API не ломала остальные
+            await Promise.allSettled([
+                fetch('https://7tv.io/v3/emote-sets/global').then(r=>r.json()).then(d => d.emotes?.forEach(e => this.thirdPartyEmotes.set(e.name, `https://cdn.7tv.app/emote/${e.id}/2x.webp`))),
+                fetch(`https://7tv.io/v3/users/twitch/${twitchId}`).then(r=>r.json()).then(d => d.emote_set?.emotes?.forEach(e => this.thirdPartyEmotes.set(e.name, `https://cdn.7tv.app/emote/${e.id}/2x.webp`))),
+                fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).then(d => d.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`))),
+                fetch(`https://api.betterttv.net/3/cached/users/twitch/${twitchId}`).then(r=>r.json()).then(d => {
+                    d.channelEmotes?.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`));
+                    d.sharedEmotes?.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`));
+                }),
+                fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).then(d => { if(d.sets) Object.values(d.sets).forEach(s => s.emoticons?.forEach(e => this.thirdPartyEmotes.set(e.name, e.urls['2']||e.urls['1']))) }),
+                fetch(`https://api.frankerfacez.com/v1/room/id/${twitchId}`).then(r=>r.json()).then(d => { if(d.sets) Object.values(d.sets).forEach(s => s.emoticons?.forEach(e => this.thirdPartyEmotes.set(e.name, e.urls['2']||e.urls['1']))) })
+            ]);
 
-            // BTTV Global & Channel
-            fetch('https://api.betterttv.net/3/cached/emotes/global').then(r=>r.json()).then(d => d.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`))).catch(()=>{});
-            fetch(`https://api.betterttv.net/3/cached/users/twitch/${twitchId}`).then(r=>r.json()).then(d => {
-                d.channelEmotes?.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`));
-                d.sharedEmotes?.forEach(e => this.thirdPartyEmotes.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/2x`));
-            }).catch(()=>{});
+            // Сохраняем в кэш
+            const emotesArr = Array.from(this.thirdPartyEmotes.entries());
+            localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), emotes: emotesArr }));
+            console.log('[WidgetCore] Смайлы получены с API и закэшированы.');
 
-            // FFZ Global & Channel
-            fetch('https://api.frankerfacez.com/v1/set/global').then(r=>r.json()).then(d => { if(d.sets) Object.values(d.sets).forEach(s => s.emoticons?.forEach(e => this.thirdPartyEmotes.set(e.name, e.urls['2']||e.urls['1']))) }).catch(()=>{});
-            fetch(`https://api.frankerfacez.com/v1/room/id/${twitchId}`).then(r=>r.json()).then(d => { if(d.sets) Object.values(d.sets).forEach(s => s.emoticons?.forEach(e => this.thirdPartyEmotes.set(e.name, e.urls['2']||e.urls['1']))) }).catch(()=>{});
-
-        } catch (e) { console.warn('[WidgetCore] Failed to load 3rd party emotes', e); }
+        } catch (e) { 
+            console.warn('[WidgetCore] Failed to fetch 3rd party emotes', e); 
+        }
     },
 
     _loadConfig: function() {

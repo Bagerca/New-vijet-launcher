@@ -16,11 +16,16 @@
     <div id="info-bar">
       <div class="info-left">
         <div class="info-user-wrap">
+          <!-- Аватарка для заказов -->
           <img id="requester-avatar" src="" alt="Avatar">
+          <!-- Иконка винила для фонового плейлиста -->
+          <div id="bg-vinyl-icon" class="hidden">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+          </div>
           <div class="avatar-ring"></div>
         </div>
         <div class="info-main">
-          <div class="info-label">СЕЙЧАС ИГРАЕТ ЗАКАЗ</div>
+          <div class="info-label" id="info-label-text">СЕЙЧАС ИГРАЕТ ЗАКАЗ</div>
           <div id="requester-name">Никнейм</div>
         </div>
       </div>
@@ -29,7 +34,7 @@
           <span id="icon-volume"></span>
           <span><span id="volume-level">30</span>%</span>
         </div>
-        <div class="stat-badge stat-queue-badge" title="В очереди">
+        <div class="stat-badge stat-queue-badge" title="В очереди зрителей">
           <span id="icon-queue"></span>
           <span id="queue-count">0</span>
         </div>
@@ -37,7 +42,6 @@
     </div>
   </div>
   
-  <!-- Относительный путь к TMI и модулю логики -->
   <script src="../shared/tmi.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>

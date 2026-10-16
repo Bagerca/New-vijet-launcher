@@ -1,10 +1,20 @@
+/* ФАЙЛ: widgets/uptime/script.js */
 import { WidgetCore } from '../shared/WidgetCore.js';
+
+function hexToRgb(hex) {
+    let h = (hex || '#ff0050').replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    
+    return `${isNaN(r) ? 255 : r}, ${isNaN(g) ? 0 : g}, ${isNaN(b) ? 80 : b}`;
+}
 
 const AppUptime = {
     container: document.getElementById('uptime-container'),
     valueEl: document.getElementById('uptime-value'),
-    dotEl: document.getElementById('up-dot'),
-    pillBg: document.getElementById('up-pill-bg'),
     textEl: document.getElementById('up-text'),
     
     startTime: null,
@@ -28,6 +38,17 @@ const AppUptime = {
             return;
         }
 
+        // Применяем кастомный цвет глобально (document.documentElement), 
+        // чтобы OBS мгновенно применял изменения без перезагрузки
+        if (config.accentColor) {
+            const hex = config.accentColor.startsWith('#') ? config.accentColor : `#${config.accentColor}`;
+            document.documentElement.style.setProperty('--uptime-accent', hex);
+            document.documentElement.style.setProperty('--uptime-accent-rgb', hexToRgb(hex));
+        } else {
+            document.documentElement.style.setProperty('--uptime-accent', '#FF0050');
+            document.documentElement.style.setProperty('--uptime-accent-rgb', '255, 0, 80');
+        }
+
         if (config.testMode === true || String(config.testMode) === 'true') {
             this.enableTestMode();
         } else {
@@ -38,19 +59,13 @@ const AppUptime = {
 
     setUIState: function(isLive) {
         if (isLive) {
-            this.dotEl.style.background = '#FF0050';
-            this.dotEl.style.boxShadow = '0 0 8px #FF0050';
+            this.container.classList.add('is-live');
+            this.container.classList.remove('is-offline');
             this.textEl.innerText = 'В ЭФИРЕ';
-            this.textEl.style.color = '#FF0050';
-            this.pillBg.style.background = 'rgba(255, 0, 80, 0.1)';
-            this.pillBg.style.borderColor = 'rgba(255, 0, 80, 0.15)';
         } else {
-            this.dotEl.style.background = '#888888';
-            this.dotEl.style.boxShadow = 'none';
+            this.container.classList.add('is-offline');
+            this.container.classList.remove('is-live');
             this.textEl.innerText = 'ОФФЛАЙН';
-            this.textEl.style.color = '#888888';
-            this.pillBg.style.background = 'rgba(0, 0, 0, 0.05)';
-            this.pillBg.style.borderColor = 'rgba(0, 0, 0, 0.05)';
         }
     },
 
@@ -86,7 +101,6 @@ const AppUptime = {
     enableTestMode: function() {
         this.isTestMode = true;
         this.isLive = true;
-        // Эмулируем запуск стрима "1 час 23 минуты назад"
         this.startTime = Date.now() - (1 * 3600 + 23 * 60 + 45) * 1000;
         this.setUIState(true);
         this.container.classList.remove('hidden');
@@ -138,6 +152,12 @@ WidgetCore.init({
             if (arg === 'on') { conf.testMode = true; changed = true; }
             else if (arg === 'off') { conf.testMode = false; changed = true; }
             else { conf.testMode = !(conf.testMode === true || String(conf.testMode) === 'true'); changed = true; }
+        }
+        else if (cmd === '!uptimec' && args[0]) {
+            let color = args[0];
+            if (!color.startsWith('#')) color = `#${color}`;
+            conf.accentColor = color;
+            changed = true;
         }
 
         if (changed) {

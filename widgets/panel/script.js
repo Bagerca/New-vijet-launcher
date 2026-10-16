@@ -1,3 +1,4 @@
+/* ФАЙЛ: widgets/panel/script.js */
 import { widgetsManifest } from '/data/widgetsManifest.js';
 
 let ws = null;
@@ -28,8 +29,15 @@ function renderUI() {
     const widgetConfig = config.widgets[widget.id] || {};
     
     const controlsHtml = widget.controls.map(control => {
-      // Игнорируем кнопки в панели модератора
-      if (control.type === 'button') return '';
+      // ИСПОЛНЯЕМЫЕ КНОПКИ В ПАНЕЛИ
+      if (control.type === 'button') {
+        return `
+          <div class="control-group">
+            <button class="panel-btn-action" data-action="${control.action}" data-payload='${JSON.stringify(control.payload)}'>
+              ▶ ${control.label}
+            </button>
+          </div>`;
+      }
 
       const val = widgetConfig[control.key] !== undefined ? widgetConfig[control.key] : control.default;
       
@@ -61,6 +69,23 @@ function renderUI() {
   }).join('');
 }
 
+// ОБРАБОТЧИК КНОПОК ДЕЙСТВИЙ (Скип, Алерты и тд)
+container.addEventListener('click', (e) => {
+  const btn = e.target.closest('.panel-btn-action');
+  if (btn) {
+    const action = btn.getAttribute('data-action');
+    const payload = JSON.parse(btn.getAttribute('data-payload') || '{}');
+    
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ event: 'WIDGET_ACTION', action, payload }));
+      showToast('Команда выполнена!');
+    } else {
+      showToast('Нет подключения к стриму!');
+    }
+  }
+});
+
+// ОБРАБОТЧИК ИНПУТОВ НАСТРОЕК
 function handleInput(e) {
   const target = e.target;
   if (!target.hasAttribute('data-widget')) return;
@@ -83,7 +108,6 @@ function handleInput(e) {
       ws.send(JSON.stringify({ event: 'UPDATE_CONFIG', data: config }));
     }
   } else {
-    // В режиме чата копируем команду в буфер
     if (!cmd) {
       showToast('У этой настройки нет чат-команды');
       return;
@@ -126,7 +150,6 @@ function connectWS() {
       if (msg.event === 'CONFIG_UPDATED') {
         config = msg.data;
         
-        // Синхронизация всех полей с анимацией
         widgetsManifest.forEach(w => w.controls.forEach(c => {
           if (c.type === 'button') return;
           const input = document.querySelector(`[data-widget="${w.id}"][data-key="${c.key}"]`);

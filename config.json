@@ -6,10 +6,10 @@
     "frame": {
       "color1": "#00ff66",
       "color2": "#ff007f",
-      "isVisible": true
+      "isVisible": false
     },
     "pet": {
-      "enabled": true,
+      "enabled": false,
       "sleepTimeout": 120,
       "feedRewardName": "Покормить лису",
       "vipUsers": "bagercaa, to_be_ang",
@@ -23,7 +23,7 @@
       "enabled": false,
       "title": "ПРИВАТНЫЙ РЕЖИМ",
       "subtitle": "Экран временно скрыт",
-      "accentColor": "#ff4d85"
+      "accentColor": "#20cb42"
     },
     "particles": {
       "enabled": false,
@@ -33,7 +33,7 @@
       "color": "#ff007f"
     },
     "deaths": {
-      "enabled": true,
+      "enabled": false,
       "deathsCount": 0,
       "color": "#ff0050"
     },
@@ -48,7 +48,7 @@
     "goal": {
       "goalTarget": 200,
       "goalTitle": "ФОЛЛОВЕРЫ:",
-      "goalColor": "#ff4d85"
+      "goalColor": "#23b620"
     },
     "chat": {
       "bgColor": "#ffffff",
@@ -58,7 +58,12 @@
     },
     "player": {
       "videoUrl": "",
-      "volume": 19
+      "accentColor": "#26c530",
+      "volume": 28,
+      "playlistEnabled": false,
+      "playlistUrls": "https://youtu.be/I9Bjf_VmQxo?si=0ry7L1jbyp1m5S61\nhttps://youtu.be/kErWhzq5gTc?si=_fZ0ZuAMo6FMXO8L\nhttps://youtu.be/PACCO-0XnDU?si=Z5uH-Q5K5qC4ndfx\nhttps://youtu.be/T24rF_x0TmQ?si=CBm8MBs9tWZKnnDY\nhttps://youtu.be/hQC_eLX1n6g?si=FE5ZwnLWWAGiNbaP\nhttps://youtu.be/XlAul6spLkA?si=KcpGDjI_OAfbNeU_\nhttps://youtu.be/u61fUWCKAG4?si=Tx4tOlFXobQGlRPw\nhttps://youtu.be/S2ujotDMluo?si=iiKjA3qc9I8j5O-l\nhttps://youtu.be/GTm_-Ceb7KA?si=3wbO_2SQAmHbJgBg\nhttps://youtu.be/6D_TvwBCXx0?si=FisbszAteTv-HMQ4\nhttps://youtu.be/g3G1-z-W1vo?si=XM3Y7pgrm0VnArfU\nhttps://youtu.be/OJXi5BvR_DU?si=W6klHWV8c6PVup8L\nhttps://youtu.be/mNG9g1yUs0Y?si=FJo6XxI_eKB2zE50\nhttps://youtu.be/zzhBsV6FzQo?si=ThuZnY5cOBBFr6cL\nhttps://youtu.be/JUXM2jCxTqY?si=2-MHXtJ12Ylbipns\nhttps://youtu.be/EheOV-WBntw?si=iy09Cu4onsFqA8cG\nhttps://youtu.be/APIXKzYgImM?si=PO8IWHBBmn6SPADQ\nhttps://youtu.be/IUuhdIFllok?si=SU25AV3FpTgx4m1m\nhttps://youtu.be/knlw6kFP_RU?si=h6SS2T8h9t5j7r8z\nhttps://youtu.be/Qp3b-RXtz4w?si=yF8JV1O4zAgVhGjm\nhttps://youtu.be/6Ro7NubzE9A?si=pB7Ruo49_VN3ZfgI\nhttps://youtu.be/ulHcNwK1q_U?si=qJBmDjpGapQ6y7k2\nhttps://youtu.be/BFfRR171G7w?si=mCDXUbI_ject4_22\nhttps://youtu.be/9Zj0JOHJR-s?si=t3JXLfC9p9m1mg1w\nhttps://youtu.be/dnNSvR2wNSo?si=REpEeKa-WS7eDmW2\nhttps://youtu.be/_8JdKz76ZHk?si=Rp0lGjNuA211TimY\nhttps://youtu.be/1Wkkjboe48c?si=eBF5XWoKPC9Kb1bP\nhttps://youtu.be/EP_htfxJXfo?si=vMD0XBiA39gpi0Xm\nhttps://youtu.be/R4ci67fvLDM?si=kuL0tSsN0ZygYQZP",
+      "playlistShuffle": false,
+      "bgVolume": 28
     },
     "ticker": {
       "isActive": true,
@@ -67,22 +72,23 @@
       "messages": "<span class='t-highlight'>МУЗЫКА</span> Пиши !play [ссылка] чтобы заказать трек в очередь.\n<span class='t-highlight'>ПРАВИЛА</span> Уважайте друг друга. Токсики отправляются в бан-лист.\n<span class='t-highlight'>TELEGRAM</span> Анонсы и мемы: <span style='color: #fff;'>t.me/pizdeckakoi_to</span>"
     },
     "socials": {
-      "isActive": true,
+      "isActive": false,
       "interval": 30,
       "tgHandle": "t.me/pizdeckakoi_to",
       "ttHandle": "@_ksusha_sher_",
       "vkHandle": "vk.com/club236843653"
     },
     "media": {
-      "isActive": false,
-      "libId": "atomic",
+      "isActive": true,
+      "libId": "mc",
       "ytLink": "",
       "type": "lib",
       "query": "CS2"
     },
     "uptime": {
       "isActive": true,
-      "testMode": false
+      "testMode": true,
+      "accentColor": "#18c923"
     },
     "tts": {
       "enabled": true,
