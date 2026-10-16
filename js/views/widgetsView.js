@@ -1,3 +1,4 @@
+/* ФАЙЛ: js/views/widgetsView.js */
 import { store } from '../store.js';
 import { icons } from '../utils/icons.js';
 import { UIControls } from '../components/UIControls.js';
@@ -33,7 +34,7 @@ export const WidgetsView = {
 
     const widgetsHtml = filteredManifest.map(widget => {
       const widgetConfig = config[widget.id] || {};
-      const masterControlKeys = ['enabled', 'isActive', 'isVisible'];
+      const masterControlKeys = ['enabled', 'isActive', 'isVisible', 'playlistEnabled'];
       let masterControl = widget.controls.find(c => c.type === 'checkbox' && masterControlKeys.includes(c.key));
       const bodyControls = widget.controls.filter(c => c !== masterControl);
       
@@ -108,7 +109,6 @@ export const WidgetsView = {
         ${widgetsHtml || '<p class="text-muted w-full text-center" style="padding: 40px;">Ничего не найдено.</p>'}
       </div>
 
-      <!-- Live Preview Modal (Семантичный <dialog>) -->
       <dialog id="preview-modal" class="modal-dialog">
         <div class="modal-content">
           <header class="modal-header">
@@ -130,12 +130,12 @@ export const WidgetsView = {
     const iframe = document.getElementById('preview-iframe');
     const title = document.getElementById('preview-title');
     
-    // Deep Link: Открытие/закрытие модалки по URL
     if (params.preview) {
         const manifest = state.widgetsManifest.find(w => w.id === params.preview);
         if (manifest && modal && !modal.open) {
             title.textContent = `Превью: ${manifest.title}`;
-            iframe.src = `widgets/${params.preview}/index.html`;
+            // Добавляем ?preview=1 чтобы виджет понимал, что он открыт в лаунчере, а не в OBS
+            iframe.src = `widgets/${params.preview}/index.html?preview=1`;
             modal.showModal();
         }
     } else {
@@ -162,7 +162,6 @@ export const WidgetsView = {
     });
     if (previewBox) WidgetsView._resizeObserver.observe(previewBox);
 
-    // Закрытие модалки по кнопке/Escape синхронизирует URL
     if (previewModal) {
       previewModal.addEventListener('close', () => {
         const hashBase = window.location.hash.split('?')[0];
@@ -178,7 +177,6 @@ export const WidgetsView = {
       });
     }
 
-    // Если зашли по прямой ссылке с открытой модалкой
     if (params.preview) WidgetsView.onParamsChange(params, state);
 
     WidgetsView._searchHandler = (e) => {
@@ -233,13 +231,12 @@ export const WidgetsView = {
     container.addEventListener('input', WidgetsView._inputHandler);
     container.addEventListener('click', WidgetsView._clickHandler);
 
-    // === РЕАКТИВНАЯ СИНХРОНИЗАЦИЯ STORE ===
     WidgetsView._unsubStore = store.subscribe((newState) => {
       const config = newState.config.widgets;
 
       newState.widgetsManifest.forEach(widget => {
         let isMasterActive = true;
-        const masterControlKeys = ['enabled', 'isActive', 'isVisible'];
+        const masterControlKeys = ['enabled', 'isActive', 'isVisible', 'playlistEnabled'];
 
         widget.controls.forEach(control => {
           if (control.type === 'button') return;
@@ -270,7 +267,6 @@ export const WidgetsView = {
               }
             }
 
-            // Вспышка при изменении извне
             if (isChanged) {
               const wrapper = input.closest('.control-group');
               if (wrapper) {

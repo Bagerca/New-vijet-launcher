@@ -58,8 +58,6 @@ export class YouTubeWrapper {
         // Мутим плеер ДО старта, чтобы не было скачков громкости
         try { this.yt.mute(); } catch (e) {}
         
-        // API само начнет воспроизведение (autoplay: 1)
-        // Категорически нельзя вызывать здесь playVideo(), это вызывает треск аудио-буфера!
         if (track.type === 'playlist') {
             this.yt.loadPlaylist({ list: track.id });
         } else {
@@ -88,7 +86,6 @@ export class YouTubeWrapper {
         }
     }
 
-    // Жесткий пинок (используется только вочдогом при зависаниях)
     kick() {
         if (this.isReady && this.yt) {
             try {

@@ -6,6 +6,9 @@ import { AvatarManager } from '../shared/AvatarManager.js';
 import { icons } from '../../js/utils/icons.js';
 import { WidgetCore } from '../shared/WidgetCore.js';
 
+// Проверяем, открыт ли виджет в предпросмотре лаунчера
+const isPreviewMode = window.location.search.includes('preview=1');
+
 function hexToRgb(hex) {
     let h = (hex || '#ff4d85').replace('#', '');
     if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -93,6 +96,9 @@ const AppPlayer = {
     watchdogTimer: null,
     progressInterval: null,
     
+    // Блокировка от спама (Infinite Loop Protection)
+    isTransitioning: false,
+    
     config: {
         volume: 30,
         playlistEnabled: false,
@@ -153,6 +159,13 @@ const AppPlayer = {
     },
 
     playNext: function() {
+        // ЗАЩИТА ОТ ГОНКИ: Если мы уже переключаем трек, игнорируем спам-команды
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+        
+        // Разблокируем возможность переключения через 1.5 секунды
+        setTimeout(() => { this.isTransitioning = false; }, 1500);
+
         this.clearWatchdog();
         if (!this.yt.isReady) return;
 
@@ -184,6 +197,12 @@ const AppPlayer = {
     },
 
     setVolume: function(vol) {
+        // Если это предпросмотр в лаунчере — принудительно мутим звук, чтобы не было эха
+        if (isPreviewMode) {
+            this.yt.setVolume(0);
+            return;
+        }
+
         const safeVol = Math.max(0, Math.min(100, parseInt(vol) || 30));
         this.yt.setVolume(safeVol);
         UI.updateVolume(safeVol);
@@ -195,7 +214,9 @@ const AppPlayer = {
             UI.setPlayingState(true);
             
             // Включаем звук ТОЛЬКО когда видео реально начало проигрываться
-            this.yt.unMute();
+            if (!isPreviewMode) {
+                this.yt.unMute();
+            }
             
             const targetVol = this.nowPlaying?.isBackground ? this.config.bgVolume : this.config.volume;
             this.setVolume(targetVol);
@@ -227,8 +248,7 @@ const AppPlayer = {
         this.watchdogTimer = setTimeout(() => {
             const state = this.yt.getState();
             if (state !== 1) {
-                // Если через 6 секунд трек так и не стартанул - даем ему жесткий пинок
-                this.yt.kick(); 
+                this.yt.forcePlay();
                 setTimeout(() => {
                     const recheck = this.yt.getState();
                     if (recheck !== 1 && recheck !== 3) this.playNext(); // Автоскип битого трека
