@@ -1,6 +1,6 @@
 {
   "obsPath": "",
-  "twitchChannel": "ksusha__sher",
+  "twitchChannel": "BAGERcaa",
   "githubRepo": "Bagerca/New-vijet-launcher",
   "widgets": {
     "frame": {
@@ -46,7 +46,7 @@
       "duration": 8
     },
     "goal": {
-      "goalTarget": 200,
+      "goalTarget": 10,
       "goalTitle": "ФОЛЛОВЕРЫ:",
       "goalColor": "#23b620"
     },
