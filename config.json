@@ -33,7 +33,7 @@
       "color": "#ff007f"
     },
     "deaths": {
-      "enabled": false,
+      "enabled": true,
       "deathsCount": 0,
       "color": "#ff0050"
     },

@@ -66,8 +66,8 @@ async function removeIfPresent(sceneName, sourceName) {
   }
 }
 
-// ==== ИДЕАЛЬНЫЙ ЛЕЙАУТ (ИНТЕГРИРОВАНЫ КООРДИНАТЫ СТРИМЕРА + SMART BLUR + TTS) ====
-const defaultLayout = {
+// ==== ИДЕАЛЬНЫЙ ЛЕЙАУТ (Извлечен из ручной выгрузки пользователя) ====
+const layoutTemplate = {
   "🔴 [Сцена] Начало": {
     "Виджет: Экран Начала": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Неоновые частицы": { "index": 1, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
@@ -79,11 +79,12 @@ const defaultLayout = {
     "Виджет: Оповещения (Alerts)": { "index": 7, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Реклама (Shoutout)": { "index": 8, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Летящие смайлы": { "index": 9, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Озвучка (TTS)": { "index": 10, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
+    "Виджет: Озвучка (TTS)": { "index": 10, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__SYS_AUDIO__": { "index": 11, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
   },
   "🗣 [Сцена] Общение": {
     "Виджет: Фон Общения": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Устройство захвата видео": { "index": 1, "positionX": 1327, "positionY": 149, "scaleX": -0.98, "scaleY": 0.97 },
+    "__WEBCAM__": { "index": 1, "positionX": 1328, "positionY": 152, "scaleX": -0.98, "scaleY": 0.98, "cropTop": 62, "cropBottom": 189 },
     "Виджет: Неоновые частицы": { "index": 2, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Заглушка (Blur)": { "index": 3, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Рамка вебки": { "index": 4, "positionX": 0, "positionY": 140, "scaleX": 1, "scaleY": 1 },
@@ -92,32 +93,36 @@ const defaultLayout = {
     "Виджет: Медиа Инфо": { "index": 7, "positionX": 24, "positionY": 856, "scaleX": 1.08, "scaleY": 1.08 },
     "Виджет: Таймер стрима (Uptime)": { "index": 8, "positionX": 560, "positionY": 885, "scaleX": 1, "scaleY": 1 },
     "Виджет: Шкала цели": { "index": 9, "positionX": 880, "positionY": 880, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Счетчик смертей": { "index": 10, "positionX": 1081, "positionY": 119, "scaleX": 1, "scaleY": 1 },
+    "Виджет: Счетчик смертей": { "index": 10, "positionX": 1069, "positionY": 108, "scaleX": 1, "scaleY": 1 },
     "Виджет: Чат Twitch": { "index": 11, "positionX": 1380, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: YouTube Плеер": { "index": 12, "positionX": 1410, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Летящие смайлы": { "index": 13, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Реклама (Shoutout)": { "index": 14, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Оповещения (Alerts)": { "index": 15, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Озвучка (TTS)": { "index": 16, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
+    "Виджет: Озвучка (TTS)": { "index": 16, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__SYS_AUDIO__": { "index": 17, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__MIC_AUDIO__": { "index": 18, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
   },
   "🎮 [Сцена] Игра": {
-    "Захват экрана 2": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Устройство захвата видео": { "index": 1, "positionX": 372, "positionY": 159, "scaleX": -0.27, "scaleY": 0.27 },
-    "Виджет: Неоновые частицы": { "index": 2, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Заглушка (Blur)": { "index": 3, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Рамка вебки": { "index": 4, "positionX": 0, "positionY": 159, "scaleX": 0.28, "scaleY": 0.28 },
-    "Виджет: Счетчик смертей": { "index": 5, "positionX": 259, "positionY": 139, "scaleX": 0.52, "scaleY": 0.52 },
-    "Виджет: Медиа Инфо": { "index": 6, "positionX": 0, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
-    "Виджет: Соцсети": { "index": 7, "positionX": 1600, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
-    "Виджет: Бегущая строка": { "index": 8, "positionX": 535, "positionY": 960, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Таймер стрима (Uptime)": { "index": 9, "positionX": 10, "positionY": 1006, "scaleX": 0.84, "scaleY": 0.84 },
-    "Виджет: Чат Twitch": { "index": 10, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7, "cropTop": 347 },
+    "__SCREEN__": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "Виджет: Неоновые частицы": { "index": 1, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "Виджет: Заглушка (Blur)": { "index": 2, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "Виджет: Чат Twitch": { "index": 3, "positionX": 0, "positionY": 292, "scaleX": 0.7, "scaleY": 0.7, "cropTop": 347 },
+    "__WEBCAM__": { "index": 4, "positionX": 372, "positionY": 162, "scaleX": -0.28, "scaleY": 0.28, "cropTop": 62, "cropBottom": 189 },
+    "Виджет: Рамка вебки": { "index": 5, "positionX": 0, "positionY": 159, "scaleX": 0.28, "scaleY": 0.28 },
+    "Виджет: Счетчик смертей": { "index": 6, "positionX": 241, "positionY": 136, "scaleX": 0.52, "scaleY": 0.52 },
+    "Виджет: Медиа Инфо": { "index": 7, "positionX": 0, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
+    "Виджет: Соцсети": { "index": 8, "positionX": 1600, "positionY": 0, "scaleX": 0.8, "scaleY": 0.8 },
+    "Виджет: Бегущая строка": { "index": 9, "positionX": 535, "positionY": 960, "scaleX": 1, "scaleY": 1 },
+    "Виджет: Таймер стрима (Uptime)": { "index": 10, "positionX": 10, "positionY": 1006, "scaleX": 0.84, "scaleY": 0.84 },
     "Виджет: Шкала цели": { "index": 11, "positionX": 760, "positionY": -10, "scaleX": 1, "scaleY": 1 },
     "Виджет: YouTube Плеер": { "index": 12, "positionX": 1520, "positionY": 750, "scaleX": 0.8, "scaleY": 0.8 },
     "Виджет: Летящие смайлы": { "index": 13, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Реклама (Shoutout)": { "index": 14, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Оповещения (Alerts)": { "index": 15, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Озвучка (TTS)": { "index": 16, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
+    "Виджет: Озвучка (TTS)": { "index": 16, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__SYS_AUDIO__": { "index": 17, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__MIC_AUDIO__": { "index": 18, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
   },
   "👋 [Сцена] Конец": {
     "Виджет: Экран Конца": { "index": 0, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
@@ -130,13 +135,16 @@ const defaultLayout = {
     "Виджет: Оповещения (Alerts)": { "index": 7, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Реклама (Shoutout)": { "index": 8, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
     "Виджет: Летящие смайлы": { "index": 9, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
-    "Виджет: Озвучка (TTS)": { "index": 10, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
+    "Виджет: Озвучка (TTS)": { "index": 10, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__SYS_AUDIO__": { "index": 11, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+    "__MIC_AUDIO__": { "index": 12, "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 }
   }
 };
 
 async function setupScenes(sendLog, portHttp) {
   const collectionName = 'New Stream Pack';
-  const audioCoreScene = '⚙️ [Ядро] Звуки и Системы';
+  const sysAudioScene = '⚙️ [Ядро] Звук (Система)';
+  const micAudioScene = '⚙️ [Ядро] Звук (Микрофон)';
   const targetScenes = ['🔴 [Сцена] Начало', '🗣 [Сцена] Общение', '🎮 [Сцена] Игра', '👋 [Сцена] Конец'];
 
   const widgetsConfig = {
@@ -149,7 +157,6 @@ async function setupScenes(sendLog, portHttp) {
     'Виджет: Таймер стрима (Uptime)': { url: '/uptime/index.html', w: 300, h: 100 },
     'Виджет: Счетчик смертей': { url: '/deaths/index.html', w: 250, h: 200 },
     'Виджет: Бегущая строка': { url: '/ticker/index.html', w: 860, h: 120 },
-    
     'Виджет: Летящие смайлы': { url: '/emotes/index.html', w: 1920, h: 1080 },
     'Виджет: Неоновые частицы': { url: '/particles/index.html', w: 1920, h: 1080 },
     'Виджет: Реклама (Shoutout)': { url: '/shoutout/index.html', w: 1920, h: 1080 },
@@ -171,21 +178,36 @@ async function setupScenes(sendLog, portHttp) {
       await delay(1000);
     }
 
+    sendLog('Поиск оборудования стримера...', 'info');
+    let micName = null, desktopName = null, webcamName = null, screenName = null;
+    const { inputs } = await obs.call('GetInputList');
+    
+    for (const input of inputs) {
+      const kind = input.unversionedInputKind || input.inputKind;
+      if (!micName && ['wasapi_input_capture', 'coreaudio_input_capture', 'pulse_input_capture', 'alsa_input_capture'].includes(kind)) micName = input.inputName;
+      if (!desktopName && ['wasapi_output_capture'].includes(kind)) desktopName = input.inputName;
+      if (!webcamName && ['dshow_input', 'av_capture'].includes(kind)) webcamName = input.inputName;
+      if (!screenName && ['monitor_capture', 'game_capture', 'window_capture'].includes(kind)) screenName = input.inputName;
+    }
+
+    if (micName) sendLog(`✅ Найден микрофон: "${micName}"`, 'success');
+    if (webcamName) sendLog(`✅ Найдена камера: "${webcamName}"`, 'success');
+
     let { scenes } = await obs.call('GetSceneList');
     let existingSceneNames = scenes.map(s => s.sceneName);
 
-    if (!existingSceneNames.includes(targetScenes[0])) await obs.call('CreateScene', { sceneName: targetScenes[0] });
-    await obs.call('SetCurrentProgramScene', { sceneName: targetScenes[0] });
-
-    if (!existingSceneNames.includes(audioCoreScene)) await obs.call('CreateScene', { sceneName: audioCoreScene });
-    
-    for (const sceneName of targetScenes) {
-      if (!existingSceneNames.includes(sceneName)) await obs.call('CreateScene', { sceneName });
+    const allScenesToCreate = [sysAudioScene, micAudioScene, ...targetScenes];
+    for (const sName of allScenesToCreate) {
+      if (!existingSceneNames.includes(sName)) await obs.call('CreateScene', { sceneName: sName });
     }
     
+    await obs.call('SetCurrentProgramScene', { sceneName: targetScenes[0] });
+
+    if (desktopName) await enforceSingleItem(sysAudioScene, desktopName);
+    if (micName) await enforceSingleItem(micAudioScene, micName);
+
     for (const [sourceName, config] of Object.entries(widgetsConfig)) {
       const url = `http://localhost:${portHttp}${config.url}?nocache=${Date.now()}`;
-      const { inputs } = await obs.call('GetInputList');
       const exists = inputs.some(i => i.inputName === sourceName);
       
       if (!exists) {
@@ -204,18 +226,28 @@ async function setupScenes(sendLog, portHttp) {
       }
     }
     
-    for (const w of Object.keys(widgetsConfig)) await removeIfPresent(audioCoreScene, w);
+    for (const sceneName of targetScenes) {
+      await removeIfPresent(sceneName, '⚙️ [Ядро] Звуки и Системы');
+    }
 
     for (const sceneName of targetScenes) {
-      await enforceSingleItem(sceneName, audioCoreScene);
+      const layoutItems = layoutTemplate[sceneName] || {};
+      const layoutWidgetNames = [];
 
-      const layoutItems = defaultLayout[sceneName] || {};
-      const layoutWidgetNames = Object.keys(layoutItems);
+      for (const [placeholderName, transform] of Object.entries(layoutItems)) {
+        let actualName = placeholderName;
+        
+        if (placeholderName === '__SYS_AUDIO__') actualName = sysAudioScene;
+        else if (placeholderName === '__MIC_AUDIO__') actualName = micAudioScene;
+        else if (placeholderName === '__WEBCAM__') actualName = webcamName;
+        else if (placeholderName === '__SCREEN__') actualName = screenName;
 
-      for (const [widgetName, transform] of Object.entries(layoutItems)) {
+        if (!actualName) continue;
+        layoutWidgetNames.push(actualName);
+
         try {
-          const itemId = await enforceSingleItem(sceneName, widgetName);
-          
+          const itemId = await enforceSingleItem(sceneName, actualName);
+
           await obs.call('SetSceneItemTransform', {
             sceneName,
             sceneItemId: itemId,
@@ -237,18 +269,19 @@ async function setupScenes(sendLog, portHttp) {
             sceneItemIndex: transform.index
           });
         } catch (e) {
-          sendLog(`Пропуск элемента: ${widgetName} (нативный исходник еще не создан)`, 'warn');
+          // Игнорируем
         }
       }
 
-      for (const widgetName of Object.keys(widgetsConfig)) {
-        if (!layoutWidgetNames.includes(widgetName)) {
-          await removeIfPresent(sceneName, widgetName);
+      const { sceneItems } = await obs.call('GetSceneItemList', { sceneName });
+      for (const item of sceneItems) {
+        if (!layoutWidgetNames.includes(item.sourceName)) {
+          await obs.call('RemoveSceneItem', { sceneName, sceneItemId: item.sceneItemId });
         }
       }
     }
 
-    sendLog('✅ Сцены перестроены под идеальный пресет стримера!', 'success');
+    sendLog('✅ Сцены перестроены! Выгруженный конфиг применен успешно.', 'success');
   } catch (error) {
     sendLog(`Ошибка настройки сцен: ${error.message}`, 'error');
   }
@@ -305,13 +338,12 @@ async function exportLayout(sendLog) {
     const targetScenes = ['🔴 [Сцена] Начало', '🗣 [Сцена] Общение', '🎮 [Сцена] Игра', '👋 [Сцена] Конец'];
     const layout = {};
     
-    // 1. Сбор координат виджетов
     for (const sceneName of targetScenes) {
       layout[sceneName] = {};
       try {
         const { sceneItems } = await obs.call('GetSceneItemList', { sceneName });
         for (const item of sceneItems) {
-          if (item.sourceName === '⚙️ [Ядро] Звуки и Системы') continue;
+          if (item.sourceName.startsWith('⚙️ [Ядро]')) continue;
           
           const { sceneItemTransform } = await obs.call('GetSceneItemTransform', { sceneName, sceneItemId: item.sceneItemId });
           
@@ -333,10 +365,8 @@ async function exportLayout(sendLog) {
       } catch (err) { sendLog(`Сцена ${sceneName} не найдена или пуста.`, 'warn'); }
     }
 
-    // 2. ГЛУБОКАЯ ДИАГНОСТИКА: Настройки устройств и фильтров
     const diagnostics = { globalAudio: [], localAudio: [], videoInputs: [], rawErrors: [] };
     
-    // Функция для вытаскивания всех параметров фильтров
     const getDetailedFilters = async (sourceName) => {
       let detailedFilters = [];
       try {
@@ -353,7 +383,6 @@ async function exportLayout(sendLog) {
       return detailedFilters;
     };
 
-    // А) ГЛОБАЛЬНЫЕ ИСТОЧНИКИ
     try { 
       const specialInputs = await obs.call('GetSpecialInputs'); 
       for (const [key, sourceName] of Object.entries(specialInputs)) {
@@ -369,7 +398,6 @@ async function exportLayout(sendLog) {
       }
     } catch(e) { diagnostics.rawErrors.push(`SpecialInputs: ${e.message}`); }
     
-    // Б) ЛОКАЛЬНЫЕ ИСТОЧНИКИ (Камеры, Микрофоны)
     try {
       const { inputs } = await obs.call('GetInputList');
       for (const input of inputs) {
