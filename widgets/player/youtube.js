@@ -1,119 +1,157 @@
-/* ФАЙЛ: widgets/player/youtube.js */
-
+/* ФАЙЛ: widgets/player/youtube.js — v6 */
 export class YouTubeWrapper {
-    constructor(containerId, callbacks) {
-        this.isReady = false;
-        this.yt = null;
-        this.callbacks = callbacks;
-        this.initAPI(containerId);
-    }
+constructor(instanceId, containerId, callbacks = {}) {
+this.instanceId = instanceId;
+this.containerId = containerId;
+this.callbacks = callbacks;
+this.isReady = false;
+this.yt = null;
+this._pendingPause = null;
+this.initAPI();
+}
 
-    initAPI(containerId) {
-        const checkAndCreate = () => {
-            if (window.YT && window.YT.Player && typeof window.YT.Player === 'function') {
-                this.createPlayer(containerId);
-            } else {
-                setTimeout(checkAndCreate, 100);
-            }
-        };
+initAPI() {
+const check = () => {
+if (window.YT && window.YT.Player && typeof window.YT.Player === 'function') this.createPlayer();
+else setTimeout(check, 100);
+};
+if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+tag.async = true;
+document.head.appendChild(tag);
+}
+check();
+}
 
-        if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-            const tag = document.createElement('script');
-            tag.src = 'https://www.youtube.com/iframe_api';
-            tag.async = true;
-            document.head.appendChild(tag);
-        }
+createPlayer() {
+if (this.yt) return;
+let origin = window.location.origin;
+if (!origin || origin === 'null' || origin === 'file://') origin = 'http://localhost:42069';
+try {
+this.yt = new YT.Player(this.containerId, {
+host: 'https://www.youtube.com',
+playerVars: {
+autoplay: 1, controls: 0, disablekb: 1, enablejsapi: 1,
+fs: 0, modestbranding: 1, playsinline: 1, rel: 0,
+origin, mute: 1
+},
+events: {
+onReady: () => {
+this.isReady = true;
+console.log(`[YT:${this.instanceId}] готов (origin ${origin})`);
+if (this.callbacks.onReady) this.callbacks.onReady();
+},
+onStateChange: (e) => { if (this.callbacks.onStateChange) this.callbacks.onStateChange(e.data); },
+onError: (e) => {
+console.error(`[YT:${this.instanceId}] ошибка ${e.data}`);
+if (this.callbacks.onError) this.callbacks.onError(e.data);
+}
+}
+});
+} catch (e) {
+console.error(`[YT:${this.instanceId}] не создан:`, e);
+}
+}
 
-        checkAndCreate();
-    }
+load(track, startSeconds = 0, autoplay = true) {
+if (!this.isReady || !this.yt || !track) return;
+if (this._pendingPause) { clearTimeout(this._pendingPause); this._pendingPause = null; }
+try { this.yt.mute(); } catch (e) {}
+const s = Math.max(0, Math.floor(Number(startSeconds) || 0));
+try {
+if (track.type === 'playlist') {
+this.yt.loadPlaylist({ list: track.id, index: 0, startSeconds: s });
+} else if (s > 0) {
+this.yt.loadVideoById({ videoId: track.id, startSeconds: s });
+} else {
+this.yt.loadVideoById({ videoId: track.id });
+}
+if (!autoplay) {
+this._pendingPause = setTimeout(() => {
+this._pendingPause = null;
+this.pause();
+}, 500);
+}
+} catch (e) {
+console.error(`[YT:${this.instanceId}] загрузка не удалась:`, e);
+}
+}
 
-    createPlayer(containerId) {
-        const originUrl = (window.location.origin && window.location.origin !== 'null' && !window.location.origin.startsWith('file'))
-            ? window.location.origin : 'https://www.youtube.com';
+play(track) { this.load(track, 0, true); }
 
-        this.yt = new YT.Player(containerId, {
-            playerVars: {
-                'autoplay': 1, 'controls': 0, 'disablekb': 1, 'enablejsapi': 1,
-                'fs': 0, 'modestbranding': 1, 'playsinline': 1, 'rel': 0,
-                'origin': originUrl
-            },
-            events: {
-                'onReady': () => {
-                    this.isReady = true;
-                    if (this.callbacks.onReady) this.callbacks.onReady();
-                },
-                'onStateChange': (e) => {
-                    if (this.callbacks.onStateChange) this.callbacks.onStateChange(e.data);
-                },
-                'onError': (e) => {
-                    if (this.callbacks.onError) this.callbacks.onError(e);
-                }
-            }
-        });
-    }
+seekTo(seconds) {
+if (!this.isReady || !this.yt || !this.yt.seekTo) return;
+try { this.yt.seekTo(Math.max(0, Number(seconds) || 0), true); } catch (e) {}
+}
 
-    play(track) {
-        if (!this.isReady || !this.yt) return;
-        
-        // Мутим плеер ДО старта, чтобы не было скачков громкости
-        try { this.yt.mute(); } catch (e) {}
-        
-        if (track.type === 'playlist') {
-            this.yt.loadPlaylist({ list: track.id });
-        } else {
-            this.yt.loadVideoById({ videoId: track.id });
-        }
-    }
+pause() {
+if (this.isReady && this.yt && this.yt.pauseVideo) {
+try { this.yt.pauseVideo(); } catch (e) {}
+}
+}
 
-    stop() {
-        if (this.isReady && this.yt && typeof this.yt.stopVideo === 'function') {
-            try { this.yt.stopVideo(); } catch (e) {}
-        }
-    }
+resume() {
+if (this.isReady && this.yt && this.yt.playVideo) {
+try { this.yt.playVideo(); } catch (e) {}
+}
+}
 
-    setVolume(vol) {
-        const safeVol = Math.max(0, Math.min(100, parseInt(vol) || 30));
-        if (this.isReady && this.yt && typeof this.yt.setVolume === 'function') {
-            try {
-                this.yt.setVolume(safeVol);
-            } catch (e) {}
-        }
-    }
+stop() {
+if (this._pendingPause) { clearTimeout(this._pendingPause); this._pendingPause = null; }
+if (this.isReady && this.yt && this.yt.stopVideo) {
+try { this.yt.mute(); this.yt.stopVideo(); } catch (e) {}
+}
+}
 
-    unMute() {
-        if (this.isReady && this.yt && typeof this.yt.unMute === 'function') {
-            try { this.yt.unMute(); } catch(e){}
-        }
-    }
+setVolume(vol) {
+const v = Math.max(0, Math.min(100, parseInt(vol) || 0));
+if (this.isReady && this.yt && this.yt.setVolume) {
+try { this.yt.setVolume(v); } catch (e) {}
+}
+}
 
-    kick() {
-        if (this.isReady && this.yt) {
-            try {
-                this.yt.unMute();
-                this.yt.playVideo();
-            } catch (e) {}
-        }
-    }
+mute() { if (this.isReady && this.yt && this.yt.mute) { try { this.yt.mute(); } catch (e) {} } }
+unMute() { if (this.isReady && this.yt && this.yt.unMute) { try { this.yt.unMute(); } catch (e) {} } }
+forcePlay() { if (this.isReady && this.yt && this.yt.playVideo) { try { this.yt.playVideo(); } catch (e) {} } }
+getState() { return this.isReady && this.yt && this.yt.getPlayerState ? this.yt.getPlayerState() : -1; }
 
-    getState() {
-        return this.isReady && this.yt && this.yt.getPlayerState ? this.yt.getPlayerState() : -1;
-    }
+getCurrentTime() {
+if (this.isReady && this.yt && this.yt.getCurrentTime) {
+try { return this.yt.getCurrentTime() || 0; } catch (e) {}
+}
+return 0;
+}
 
-    getProgress() {
-        if (this.isReady && this.yt && this.yt.getCurrentTime && this.yt.getDuration) {
-            const cur = this.yt.getCurrentTime();
-            const tot = this.yt.getDuration();
-            if (tot > 0) return Math.max(0, Math.min(1, cur / tot));
-        }
-        return 0;
-    }
+getDuration() {
+if (this.isReady && this.yt && this.yt.getDuration) {
+try { return this.yt.getDuration() || 0; } catch (e) {}
+}
+return 0;
+}
 
-    isPlaylistEnded() {
-        if (this.isReady && this.yt && this.yt.getPlaylist && this.yt.getPlaylistIndex) {
-            const pl = this.yt.getPlaylist();
-            const idx = this.yt.getPlaylistIndex();
-            return (!pl || idx === pl.length - 1);
-        }
-        return true;
-    }
+getTimes() { return { current: this.getCurrentTime(), duration: this.getDuration() }; }
+
+getProgress() {
+const { current, duration } = this.getTimes();
+return duration > 0 ? Math.max(0, Math.min(1, current / duration)) : 0;
+}
+
+isPlaylistEnded() {
+if (this.isReady && this.yt && this.yt.getPlaylist && this.yt.getPlaylistIndex) {
+try {
+const pl = this.yt.getPlaylist();
+const idx = this.yt.getPlaylistIndex();
+return (!pl || pl.length === 0 || idx === pl.length - 1);
+} catch (e) {}
+}
+return true;
+}
+
+destroy() {
+if (this._pendingPause) clearTimeout(this._pendingPause);
+if (this.yt && this.yt.destroy) { try { this.yt.destroy(); } catch (e) {} }
+this.yt = null;
+this.isReady = false;
+}
 }

@@ -1,0 +1,147 @@
+/* ФАЙЛ: widgets/chat/custom/holo.css — v1 (референсный персональный скин «Голограмма») */
+
+.chat-block[data-skin="holo"] {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	border-radius: 0;
+}
+
+.chat-block[data-skin="holo"] .holo-frame {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--chat-pad, 14px) * 0.5);
+	padding: calc(var(--chat-pad, 14px) * 0.9) var(--chat-pad, 14px);
+	background: linear-gradient(160deg, rgba(var(--u-rgb), 0.12) 0%, rgba(6, 10, 16, 0.84) 55%, rgba(6, 10, 16, 0.9) 100%);
+	border: 1px solid rgba(var(--u-rgb), 0.55);
+	clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+	filter: drop-shadow(0 0 14px rgba(var(--u-rgb), calc(0.35 * var(--chat-shadow, 0.6))));
+	backdrop-filter: blur(var(--chat-blur, 16px));
+	-webkit-backdrop-filter: blur(var(--chat-blur, 16px));
+	overflow: hidden;
+	isolation: isolate;
+}
+
+/* Угловые скобки HUD */
+.chat-block[data-skin="holo"] .holo-corner {
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	border: 2px solid var(--u);
+	pointer-events: none;
+	z-index: 3;
+	opacity: 0.9;
+}
+.chat-block[data-skin="holo"] .holo-tl { top: 3px; left: 3px; border-right: none; border-bottom: none; }
+.chat-block[data-skin="holo"] .holo-tr { top: 3px; right: 3px; border-left: none; border-bottom: none; }
+.chat-block[data-skin="holo"] .holo-bl { bottom: 3px; left: 3px; border-right: none; border-top: none; }
+.chat-block[data-skin="holo"] .holo-br { bottom: 3px; right: 3px; border-left: none; border-top: none; }
+
+/* Бегущая скан-линия (без JS-таймеров) */
+.chat-block[data-skin="holo"] .holo-scan {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: -30%;
+	height: 26%;
+	background: linear-gradient(180deg, transparent, rgba(var(--u-rgb), 0.14), transparent);
+	animation: holoScan 3.2s linear infinite;
+	animation-delay: var(--holo-delay, 0s);
+	pointer-events: none;
+	z-index: 1;
+}
+@keyframes holoScan {
+	0% { top: -30%; }
+	100% { top: 110%; }
+}
+
+/* Шапка: ник слева, время и аватар справа — структура отличается от стандартной */
+.chat-block[data-skin="holo"] .holo-head { position: relative; z-index: 2; }
+.chat-block[data-skin="holo"] .chat-user {
+	color: var(--u);
+	text-shadow: 0 0 12px rgba(var(--u-rgb), 0.7);
+	letter-spacing: 0.6px;
+}
+.chat-block[data-skin="holo"] .chat-time { color: #cfe6ff; opacity: 0.5; }
+
+/* Аватар-гексагон */
+.chat-block[data-skin="holo"] .holo-avatar-slot { order: 3; }
+.chat-block[data-skin="holo"] .chat-avatar {
+	clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+	border-radius: 0;
+	background-color: rgba(var(--u-rgb), 0.3);
+}
+.chat-block[data-skin="holo"] .chat-avatar-ring { display: none; }
+
+/* Текст в «проекции» */
+.chat-block[data-skin="holo"] .holo-text {
+	position: relative;
+	z-index: 2;
+	color: #eaf6ff;
+	text-shadow: 0 0 8px rgba(var(--u-rgb), 0.35), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.chat-block[data-skin="holo"] .chat-reply { position: relative; z-index: 2; }
+.chat-block[data-skin="holo"] .chat-reply-text { color: #cfe0f2; }
+.chat-block[data-skin="holo"] .chat-flag { position: relative; z-index: 2; }
+
+/* Служебный футер */
+.chat-block[data-skin="holo"] .holo-foot {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding-top: 2px;
+	border-top: 1px dashed rgba(var(--u-rgb), 0.3);
+}
+.chat-block[data-skin="holo"] .holo-dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--u);
+	box-shadow: 0 0 8px rgba(var(--u-rgb), 0.9);
+	animation: holoBlink 1.4s infinite alternate ease-in-out;
+}
+.chat-block[data-skin="holo"] .holo-tag {
+	font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+	font-size: calc(var(--chat-nick-size, 16px) * 0.52);
+	font-weight: 700;
+	letter-spacing: 1.6px;
+	color: rgba(var(--u-rgb), 0.75);
+	text-transform: uppercase;
+}
+@keyframes holoBlink { 0% { opacity: 0.35; } 100% { opacity: 1; } }
+
+/* Искры от onMount-эффекта (самогасящиеся, без таймеров) */
+.chat-block[data-skin="holo"] .holo-spark {
+	position: absolute;
+	bottom: 8px;
+	left: var(--spark-x, 50%);
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--u);
+	box-shadow: 0 0 8px rgba(var(--u-rgb), 0.9);
+	pointer-events: none;
+	z-index: 4;
+	animation: holoSpark 0.9s ease-out forwards;
+	animation-delay: var(--spark-delay, 0s);
+	opacity: 0;
+}
+@keyframes holoSpark {
+	0% { opacity: 0; transform: translateY(0) scale(0.6); }
+	20% { opacity: 1; }
+	100% { opacity: 0; transform: translateY(-34px) scale(1.3); }
+}
+
+/* Глитч-вход поверх стандартной анимации появления */
+.chat-block[data-skin="holo"].is-in .holo-frame { animation: holoFlicker 0.5s steps(6) both; }
+@keyframes holoFlicker {
+	0% { opacity: 0.2; }
+	30% { opacity: 1; }
+	45% { opacity: 0.55; }
+	60% { opacity: 1; }
+	75% { opacity: 0.8; }
+	100% { opacity: 1; }
+}

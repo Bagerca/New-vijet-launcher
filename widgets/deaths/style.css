@@ -1,73 +1,69 @@
+/* ФАЙЛ: widgets/deaths/style.css — v2 (параметризованный размер, тряска, цвет комбо) */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
 
 :root {
     --death-color: #FF0050;
+    --death-glow: rgba(255, 0, 80, 0.5);
     --combo-color: #FF8C00;
+    --death-size: 64px;
+    --death-shake: 1;
 }
 
-body { 
-    margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; 
-    background-color: transparent; font-family: 'Montserrat', sans-serif; 
-    display: flex; 
-    align-items: center; 
-    /* ЖЕСТКИЙ ЯКОРЬ К ПРАВОМУ КРАЮ: */
-    justify-content: flex-end; 
+body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+    background-color: transparent; font-family: 'Montserrat', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     padding-right: 15px;
     box-sizing: border-box;
 }
 
-#deaths-container { 
+#deaths-container {
     position: relative;
     width: max-content;
     height: max-content;
-    display: flex; flex-direction: column; align-items: flex-end; 
-    transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); 
-    opacity: 1; z-index: 40; 
+    display: flex; flex-direction: column; align-items: flex-end;
+    transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 1; z-index: 40;
 }
-
 #deaths-container.hidden { opacity: 0; pointer-events: none; }
 
-/* ================= СЛОЙ СКОЛЬЖЕНИЯ (ОТЪЕЗД ВНИЗ) ================= */
 #deaths-mover {
     display: flex; flex-direction: column; align-items: flex-end;
     transform: translateY(0);
     transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 #deaths-container.has-combo #deaths-mover {
-    transform: translateY(32px); /* Отъезжает вниз, освобождая место для комбо */
+    transform: translateY(calc(var(--death-size) * 0.5));
 }
 
-/* ================= СЛОЙ ТРЯСКИ (УРОН) ================= */
-#deaths-shaker {
-    display: flex; flex-direction: column; align-items: flex-end;
+#deaths-shaker { display: flex; flex-direction: column; align-items: flex-end; }
+
+.deaths-title {
+    font-size: calc(var(--death-size) * 0.25);
+    color: var(--death-color); font-weight: 900; text-transform: uppercase;
+    letter-spacing: 0.375em; margin-right: -0.375em; line-height: 1; margin-bottom: 2px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    text-shadow: 0 0 10px var(--death-glow);
+    white-space: nowrap;
 }
 
-.deaths-title { 
-    font-size: 16px; color: var(--death-color); font-weight: 900; text-transform: uppercase; 
-    letter-spacing: 6px; margin-right: -6px; line-height: 1; margin-bottom: 2px; 
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); text-shadow: 0 0 10px rgba(255, 0, 80, 0.4); 
+#deaths-count {
+    font-size: var(--death-size); font-weight: 900; color: var(--death-color); line-height: 0.85;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    text-shadow: 0 0 20px var(--death-glow);
+    font-variant-numeric: tabular-nums;
 }
 
-#deaths-count { 
-    font-size: 64px; font-weight: 900; color: var(--death-color); line-height: 0.85; 
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); text-shadow: 0 0 20px rgba(255, 0, 80, 0.5); 
-    font-variant-numeric: tabular-nums; 
-}
-
-/* ================= КОМБО АНИМАЦИИ ================= */
 #deaths-combo {
     position: absolute;
-    top: 0; right: 0; /* Всегда сидит сверху */
-    
-    /* ЖЕСТКИЙ ЗАПРЕТ НА ПЕРЕНОС СТРОК */
+    top: 0; right: 0;
     white-space: nowrap;
-    
-    font-size: 22px; font-weight: 900; color: var(--combo-color);
-    letter-spacing: 2px; text-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 15px var(--combo-color);
+    font-size: calc(var(--death-size) * 0.34); font-weight: 900; color: var(--combo-color);
+    letter-spacing: 2px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 15px var(--combo-color);
     transform-origin: right center; font-style: italic;
-    
-    /* Начальное состояние (скрыто) */
     opacity: 0;
     pointer-events: none;
 }
@@ -80,25 +76,26 @@ body {
     50% { transform: scale(1.2); opacity: 1; filter: brightness(1.5) blur(0px); }
     100% { transform: scale(1); opacity: 1; filter: brightness(1) blur(0px); }
 }
-
 @keyframes comboExit {
     0% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1) blur(0px); }
     100% { transform: scale(0.8) translateY(-15px); opacity: 0; filter: brightness(0.5) blur(4px); }
 }
 
-/* ================= ОСТАЛЬНЫЕ ЭФФЕКТЫ ================= */
 .animate-pop-red { animation: popRedText 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-@keyframes popRedText { 
-    0% { transform: scale(1); filter: brightness(1); } 
-    40% { transform: scale(1.3); filter: brightness(1.2); text-shadow: 0 0 40px var(--death-color); } 
-    100% { transform: scale(1); } 
+@keyframes popRedText {
+    0% { transform: scale(1); filter: brightness(1); }
+    40% { transform: scale(1.3); filter: brightness(1.2); text-shadow: 0 0 40px var(--death-color); }
+    100% { transform: scale(1); }
 }
 
 .damage-shake { animation: textShake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-
-@keyframes textShake { 
-    0%, 100% { transform: translateX(0); } 
-    20%, 60% { transform: translateX(-8px) rotate(-4deg); } 
-    40%, 80% { transform: translateX(8px) rotate(4deg); color: #fff; text-shadow: 0 0 40px var(--death-color); } 
+@keyframes textShake {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    20%, 60% {
+        transform: translateX(calc(-8px * var(--death-shake))) rotate(calc(-4deg * var(--death-shake)));
+    }
+    40%, 80% {
+        transform: translateX(calc(8px * var(--death-shake))) rotate(calc(4deg * var(--death-shake)));
+        color: #fff; text-shadow: 0 0 40px var(--death-color);
+    }
 }

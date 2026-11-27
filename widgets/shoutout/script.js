@@ -1,3 +1,5 @@
+import { WidgetCore } from '../shared/WidgetCore.js';
+
 async function safeFetch(url, options = {}, maxRetries = 2) {
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -5,10 +7,7 @@ async function safeFetch(url, options = {}, maxRetries = 2) {
             if (!response.ok) throw new Error(`HTTP Ошибка: ${response.status}`);
             return await response.json();
         } catch (err) {
-            if (i === maxRetries - 1) {
-                console.error(`[Shoutout] Ошибка запроса к ${url} после ${maxRetries} попыток.`, err);
-                throw err; 
-            }
+            if (i === maxRetries - 1) throw err; 
             await new Promise(res => setTimeout(res, 500));
         }
     }
@@ -19,39 +18,6 @@ const AppShoutout = {
     queue: [],
     isPlaying: false,
     duration: 8000, 
-
-    init: function() {
-        fetch('/api/config')
-          .then(res => res.json())
-          .then(config => {
-              this.applyConfig(config.widgets?.shoutout || {});
-              initTMI(config);
-              connectWS();
-          })
-          .catch(() => {
-              const saved = localStorage.getItem('stream_pack_config');
-              if (saved) {
-                  const conf = JSON.parse(saved);
-                  this.applyConfig(conf.widgets?.shoutout || {});
-              }
-              connectWS();
-          });
-
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'stream_pack_config' && e.newValue) {
-                const conf = JSON.parse(e.newValue);
-                this.applyConfig(conf.widgets?.shoutout || {});
-            }
-            if (e.key === 'stream_pack_action' && e.newValue) {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    if (data.action === 'TEST_SHOUTOUT') {
-                        this.add(data.payload.user);
-                    }
-                } catch(err){}
-            }
-        });
-    },
 
     applyConfig: function(config) {
         if (config.duration !== undefined) {
@@ -128,7 +94,7 @@ const AppShoutout = {
         this.container.classList.remove('hidden', 'shoutout-out');
         
         try {
-            const audio = new Audio('/data/sounds/shoutout.mp3');
+            const audio = new Audio('../../data/sounds/shoutout.mp3');
             audio.volume = 0.5;
             audio.play().catch(e => {});
         } catch (e) {}
@@ -146,52 +112,21 @@ const AppShoutout = {
     }
 };
 
-let currentClient = null;
-let currentChannel = null;
-
-async function initTMI(config) {
-    if (!config.twitchChannel) return;
-    const channel = config.twitchChannel.replace(/[@#]/g, '').trim().toLowerCase();
-    
-    if (currentChannel === channel) return;
-    currentChannel = channel;
-    
-    if (currentClient) await currentClient.disconnect();
-    
-    currentClient = new tmi.Client({ channels: [channel] });
-    
-    currentClient.on('message', (chan, tags, message) => {
-        const isMod = tags.mod || (tags.badges && tags.badges.broadcaster === '1');
-        const msgLow = message.trim().toLowerCase();
-        
-        if (isMod) {
-            const isCommand = msgLow.startsWith('!so ') || msgLow.startsWith('!shoutout ');
-            if (isCommand) {
-                const parts = message.trim().split(' ');
-                if (parts.length > 1 && parts[1] !== "") {
-                    AppShoutout.add(parts[1]);
-                }
+// Интеграция с Ядром
+WidgetCore.init({
+    onConfigUpdate: (config) => {
+        if (config.widgets?.shoutout) AppShoutout.applyConfig(config.widgets.shoutout);
+    },
+    onTwitchCommand: (cmd, args) => {
+        if (cmd === '!so' || cmd === '!shoutout') {
+            if (args.length > 0 && args[0] !== "") {
+                AppShoutout.add(args[0]);
             }
         }
-    });
-    
-    await currentClient.connect();
-}
-
-function connectWS() {
-    const ws = new WebSocket('ws://localhost:42069');
-    
-    ws.onmessage = (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            if (message.event === 'CONFIG_UPDATED') {
-                initTMI(message.data);
-                if (message.data.widgets?.shoutout) AppShoutout.applyConfig(message.data.widgets.shoutout);
-            }
-        } catch (e) {}
-    };
-    
-    ws.onclose = () => setTimeout(connectWS, 3000);
-}
-
-AppShoutout.init();
+    },
+    onWidgetAction: (action, payload) => {
+        if (action === 'TEST_SHOUTOUT') {
+            AppShoutout.add(payload.user);
+        }
+    }
+});

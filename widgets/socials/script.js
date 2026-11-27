@@ -1,132 +1,216 @@
+/* ФАЙЛ: widgets/socials/script.js — v2 (WidgetCore, ротация по id, живые команды и состояния) */
+import { WidgetCore } from '../shared/WidgetCore.js';
+import { icons } from '../../js/utils/icons.js';
+import { activeNetworks, normalizeNetworks, serializeNetworks, legacyPatch, intervalFrom, getPlatform } from './networks.js';
+
+const PARAMS = new URLSearchParams(window.location.search);
+const IS_PREVIEW = PARAMS.get('preview') === '1';
+const SOURCE = IS_PREVIEW ? 'preview' : 'obs';
+const FADE_MS = 420;
+const HEARTBEAT_MS = 5000;
+
 const AppSocials = {
     container: document.getElementById('social-rotator'),
-    currentIndex: 0,
-    intervalId: null,
-    networks: [],
-    currentIntervalSec: 30,
-    
-    icons: {
-        telegram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z"/></svg>`,
-        vk: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.162 18.994c.609 0 .858-.406.851-.915-.031-1.917.714-2.949 2.059-1.604 1.488 1.488 1.796 2.519 3.603 2.519h3.2c.808 0 1.126-.26 1.126-.668 0-.863-1.421-2.386-2.625-3.504-1.686-1.565-1.765-1.602-.313-3.486 1.801-2.339 2.583-3.929 2.378-4.542-.187-.557-1.126-.64-1.126-.64h-3.834c-.421 0-.693.208-.858.557C17.07 7.79 16.037 10.272 14.548 11.53c-.886.745-1.162.775-1.162.24V6.853c0-.609-.26-1.02-1.02-1.02h-4.382c-.378 0-.609.183-.609.431 0 .431.64.557.858 1.801.328 1.884.281 3.513-.378 3.96-.543.368-1.503-.178-3.324-3.535C3.763 7.028 3.42 6.13 3.056 6.13H-.26c-.457 0-.583.218-.583.473 0 .473.858 2.059 4.148 6.551 2.859 3.896 5.86 6.175 9.07 6.175h.787z"/></svg>`,
-        tiktok: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93v7.2c0 1.96-.75 3.85-2.05 5.25-1.31 1.41-3.23 2.24-5.23 2.27-1.96.04-3.92-.66-5.35-1.98-1.44-1.33-2.31-3.2-2.37-5.18-.05-1.92.76-3.83 2.11-5.18 1.34-1.35 3.23-2.13 5.15-2.19v4.06c-1.19.01-2.34.61-3.08 1.54-.74.93-1.07 2.15-.9 3.33.16 1.17.84 2.23 1.83 2.84 1.01.62 2.25.75 3.38.38 1.13-.37 2.05-1.18 2.56-2.23.51-1.05.61-2.29.28-3.4-.33-1.11-1.05-2.07-2.02-2.68V.02z"/></svg>`
-    },
+    list: [],
+    currentId: null,
+    intervalSec: 30,
+    enabled: true,
+    timer: null,
+    fadeTimer: null,
+    transitioning: false,
+    _sig: '',
 
-    init: function() {
-        this.connectWS();
-    },
-    
-    connectWS: function() {
-        const ws = new WebSocket('ws://localhost:42069');
-        
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.event === 'CONFIG_UPDATED' && message.data.widgets?.socials) {
-                    this.applyConfig(message.data.widgets.socials);
-                }
-            } catch (e) {}
-        };
-        
-        ws.onclose = () => setTimeout(() => this.connectWS(), 3000);
-    },
-
-    applyConfig: function(config) {
-        // ИСПРАВЛЕНО: безопасная проверка строки "false"
+    applyConfig(conf) {
+        if (!this.container) return;
+        const config = conf || {};
         const isOff = config.isActive === false || String(config.isActive) === 'false';
-        if (isOff) {
-            this.container.classList.add('hidden');
-            clearInterval(this.intervalId);
+        const next = activeNetworks(config);
+        const interval = intervalFrom(config);
+        const sig = JSON.stringify([isOff, interval, next.map(n => [n.id, n.handle, n.color])]);
+        if (sig === this._sig) return;
+        this._sig = sig;
+
+        this.enabled = !isOff;
+        this.intervalSec = interval;
+        this.list = next;
+
+        if (isOff || next.length === 0) {
+            this.stopRotation();
+            this.cancelFade();
+            this.hide();
+            this.report();
             return;
         }
 
-        // Парсим массив соцсетей из инпутов конфига
-        const newNetworks = [];
-        if (config.tgHandle && config.tgHandle.trim() !== '') {
-            newNetworks.push({ id: "telegram", title: "Telegram", handle: config.tgHandle.trim(), color: "#24A1DE" });
-        }
-        if (config.tiktokHandle && config.tiktokHandle.trim() !== '') { 
-            newNetworks.push({ id: "tiktok", title: "TikTok", handle: config.tiktokHandle.trim(), color: "#FF0050" });
-        } else if (config.ttHandle && config.ttHandle.trim() !== '') {
-            newNetworks.push({ id: "tiktok", title: "TikTok", handle: config.ttHandle.trim(), color: "#FF0050" });
-        }
-        if (config.vkHandle && config.vkHandle.trim() !== '') {
-            newNetworks.push({ id: "vk", title: "ВКонтакте", handle: config.vkHandle.trim(), color: "#0077FF" });
-        }
-
-        if (newNetworks.length === 0) {
-            this.container.classList.add('hidden');
-            clearInterval(this.intervalId);
-            return;
-        }
-
-        this.networks = newNetworks;
+        if (!next.some(n => n.id === this.currentId)) this.currentId = next[0].id;
         this.container.classList.remove('hidden');
-
-        // Если интервал изменился, перезапускаем таймер
-        const newInterval = parseInt(config.interval) || 30;
-        if (newInterval !== this.currentIntervalSec || !this.intervalId) {
-            this.currentIntervalSec = newInterval;
-            this.startRotation();
-        }
-
-        // Сразу отображаем первую
-        if (this.currentIndex >= this.networks.length) this.currentIndex = 0;
         this.render();
-        setTimeout(() => this.container.classList.remove('fade-out'), 500);
+        this.restartRotation();
+        this.reveal();
+        this.report();
     },
 
-    startRotation: function() {
-        clearInterval(this.intervalId);
-        if (this.networks.length > 1) {
-            this.intervalId = setInterval(() => {
-                this.next();
-            }, this.currentIntervalSec * 1000);
+    stopRotation() {
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    },
+
+    restartRotation() {
+        this.stopRotation();
+        if (this.list.length > 1) {
+            this.timer = setInterval(() => this.next(), this.intervalSec * 1000);
         }
     },
-    
-    next: function() {
-        this.container.classList.add('fade-out');
-        
-        setTimeout(() => {
-            this.currentIndex = (this.currentIndex + 1) % this.networks.length;
-            this.render();
-            
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    this.container.classList.remove('fade-out');
-                });
-            });
-        }, 500); 
+
+    cancelFade() {
+        if (this.fadeTimer) { clearTimeout(this.fadeTimer); this.fadeTimer = null; }
+        this.transitioning = false;
+        if (this.container) this.container.classList.remove('fade-out');
     },
 
-    render: function() {
-        if (!this.networks[this.currentIndex]) return;
-        
-        const data = this.networks[this.currentIndex];
-        const iconSvg = this.icons[data.id] || this.icons.telegram; 
+    reveal() {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (this.container) this.container.classList.remove('fade-out');
+        }));
+    },
 
-        this.container.style.setProperty('--social-color', data.color);
-        this.container.style.setProperty('--social-glow', data.color + '26'); 
+    hide() {
+        if (this.container) this.container.classList.add('hidden');
+    },
 
+    next() {
+        if (this.transitioning || this.list.length < 2) return;
+        const idx = this.list.findIndex(n => n.id === this.currentId);
+        const item = this.list[((idx < 0 ? 0 : idx) + 1) % this.list.length];
+        if (item) this.show(item.id, true, false);
+    },
+
+    show(id, animate = true, resetTimer = true) {
+        const item = this.list.find(n => n.id === id);
+        if (!item) return;
+        if (!animate) {
+            this.currentId = item.id;
+            this.render();
+            this.reveal();
+            if (resetTimer) this.restartRotation();
+            this.report();
+            return;
+        }
+        if (this.transitioning) return;
+        this.transitioning = true;
+        this.container.classList.add('fade-out');
+        if (this.fadeTimer) clearTimeout(this.fadeTimer);
+        this.fadeTimer = setTimeout(() => {
+            this.fadeTimer = null;
+            if (!this.list.some(n => n.id === item.id)) { this.transitioning = false; return; }
+            this.currentId = item.id;
+            this.render();
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                this.container.classList.remove('fade-out');
+                this.transitioning = false;
+            }));
+            if (resetTimer) this.restartRotation();
+            this.report();
+        }, FADE_MS);
+    },
+
+    render() {
+        if (!this.container) return;
+        const item = this.list.find(n => n.id === this.currentId) || this.list[0];
+        if (!item) return;
+        this.currentId = item.id;
+        const p = getPlatform(item.id);
+        const color = item.color;
+        const iconFn = p && typeof icons[p.icon] === 'function' ? icons[p.icon] : null;
+        const iconSvg = iconFn ? iconFn() : '';
+
+        this.container.style.setProperty('--social-color', color);
+        this.container.style.setProperty('--social-glow', `${color}26`);
         this.container.innerHTML = `
-            <div class="social-icon-wrapper" style="color: ${data.color}; background: ${data.color}15; border: 1px solid ${data.color}25;">
-                ${iconSvg}
-            </div>
-            <div class="social-info">
-                <div class="social-badge">
-                    <div class="social-dot" style="background: ${data.color}; box-shadow: 0 0 6px ${data.color};"></div>
-                    <span style="color: ${data.color};">${data.title}</span>
-                </div>
-                <span class="social-handle">${data.handle}</span>
-            </div>
-        `;
+<div class="social-icon-wrapper" style="color: ${color}; background: ${color}15; border: 1px solid ${color}25;">${iconSvg}</div>
+<div class="social-info">
+<div class="social-badge">
+<div class="social-dot" style="background: ${color}; box-shadow: 0 0 6px ${color};"></div>
+<span style="color: ${color};"></span>
+</div>
+<span class="social-handle"></span>
+</div>`;
+        const titleEl = this.container.querySelector('.social-badge span');
+        const handleEl = this.container.querySelector('.social-handle');
+        if (titleEl) titleEl.textContent = p ? p.title : item.id;
+        if (handleEl) handleEl.textContent = item.handle;
+    },
+
+    report() {
+        const idx = this.list.findIndex(n => n.id === this.currentId);
+        WidgetCore.sendAction('SOCIALS_STATE', {
+            source: SOURCE,
+            id: this.currentId,
+            index: idx,
+            total: this.list.length,
+            interval: this.intervalSec,
+            enabled: this.enabled,
+            ts: Date.now()
+        });
+    },
+
+    handleAction(action, payload = {}) {
+        if (action === 'SOCIALS_SHOW') {
+            if (payload && payload.id) this.show(String(payload.id), true, true);
+            return;
+        }
+        if (action === 'SOCIALS_NEXT') { this.next(); return; }
+        if (action === 'SOCIALS_REQUEST_STATE') { this.report(); }
+    },
+
+    writeList(list, extra) {
+        const networks = serializeNetworks(list);
+        WidgetCore.updateWidgetConfig('socials', { networks, ...legacyPatch(networks), ...(extra || {}) });
+    },
+
+    handleChat(cmd, args) {
+        // Команды приходят и мастеру, и слейвам через шину — пишет только мастер.
+        if (!WidgetCore.isMaster) return;
+        const conf = { ...(WidgetCore.globalConfig?.widgets?.socials || {}) };
+        const list = normalizeNetworks(conf);
+
+        if (cmd === '!socials') {
+            const arg = (args[0] || '').toLowerCase();
+            const cur = conf.isActive === true || String(conf.isActive) === 'true';
+            const next = arg === 'on' ? true : (arg === 'off' ? false : !cur);
+            WidgetCore.updateWidgetConfig('socials', { isActive: next });
+            console.log(`[Socials] !socials → ${next ? 'включён' : 'выключен'}`);
+            return;
+        }
+
+        if (cmd === '!socialsint') {
+            const n = parseInt(args[0], 10);
+            if (isNaN(n)) return;
+            const value = Math.max(3, Math.min(600, n));
+            WidgetCore.updateWidgetConfig('socials', { interval: value });
+            console.log(`[Socials] !socialsint → ${value}s`);
+            return;
+        }
+
+        const map = { '!stg': 'telegram', '!stt': 'tiktok', '!svk': 'vk' };
+        const platformId = map[cmd];
+        if (!platformId) return;
+        const value = (args || []).join(' ').trim();
+        const p = getPlatform(platformId);
+        const existing = list.find(n => n.id === platformId);
+        if (existing) existing.handle = value;
+        else if (value) list.push({ id: platformId, handle: value, color: p.color, enabled: true });
+        this.writeList(list);
+        console.log(`[Socials] ${cmd} → ${value || 'очищено'}`);
     }
 };
 
-fetch('http://localhost:42069/api/config')
-  .then(res => res.json())
-  .then(config => {
-      AppSocials.applyConfig(config.widgets?.socials || {});
-      AppSocials.init();
-  })
-  .catch(() => AppSocials.init());
+WidgetCore.init({
+    onConfigUpdate: (config) => {
+        if (config?.widgets?.socials) AppSocials.applyConfig(config.widgets.socials);
+    },
+    onWidgetAction: (action, payload) => AppSocials.handleAction(action, payload),
+    onTwitchCommand: (cmd, args) => AppSocials.handleChat(cmd, args)
+});
+
+setInterval(() => AppSocials.report(), HEARTBEAT_MS);
+console.log(`[Socials] v2 инициализирован (${SOURCE})`);

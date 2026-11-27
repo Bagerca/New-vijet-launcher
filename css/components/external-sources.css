@@ -1,0 +1,144 @@
+/* ФАЙЛ: css/components/external-sources.css — v1 (карточка внешних источников: бейджи, dropzone, список, сообщения) */
+
+.st-lede { line-height: 1.55; max-width: 640px; }
+.st-strong { color: var(--text-primary); }
+
+.st-ext-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.st-badges { display: flex; gap: 8px; flex-wrap: wrap; margin: var(--space-sm) 0; }
+
+.st-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: var(--radius-full);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+  border: 1px solid var(--border-hover); background: var(--bg-input); color: var(--text-secondary);
+}
+.st-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.st-badge.is-ok { background: var(--color-success-dim); color: var(--color-success); border-color: var(--color-success); }
+.st-badge.is-info { background: var(--color-info-dim); color: var(--color-info); border-color: var(--color-info); }
+.st-badge.is-warn { background: var(--color-warning-dim); color: var(--color-warning); border-color: var(--color-warning); }
+.st-badge.is-error, .st-badge.is-off { background: var(--color-danger-dim); color: var(--color-danger); border-color: var(--color-danger-dim); }
+
+/* ---------- Dropzone импорта ключа ---------- */
+.st-drop {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; margin: var(--space-sm) 0;
+  border: 2px dashed var(--border-hover); border-radius: var(--radius-md);
+  background: var(--bg-input); cursor: pointer; outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.st-drop:hover:not(.is-disabled), .st-drop:focus-visible {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 14px var(--accent-primary-dim);
+}
+.st-drop.is-over {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-dim);
+  box-shadow: 0 0 22px var(--accent-glow);
+  transform: scale(1.01);
+}
+.st-drop.is-disabled { opacity: 0.45; cursor: not-allowed; }
+.st-drop.is-busy { border-color: var(--color-info); cursor: progress; }
+.st-drop.is-busy .st-drop-ic svg { animation: stDropSpin 0.9s linear infinite; }
+@keyframes stDropSpin { 100% { transform: rotate(360deg); } }
+
+.st-drop-ic {
+  width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; background: var(--bg-surface);
+  border: 1px solid var(--border-hover); color: var(--accent-primary);
+  transition: border-color 0.2s ease;
+}
+.st-drop-ic svg { width: 20px; height: 20px; }
+.st-drop.is-over .st-drop-ic {
+  border-color: var(--accent-primary);
+  animation: stDropBounce 0.5s ease infinite alternate;
+}
+@keyframes stDropBounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+.st-drop-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.st-drop-title { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.st-drop-sub { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+/* ---------- Список источников ---------- */
+.st-ext-list { display: flex; flex-direction: column; gap: 10px; }
+
+.st-src {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 12px 14px; background: var(--bg-input);
+  border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, opacity 0.2s ease;
+}
+.st-src.is-off { opacity: 0.5; border-left-color: var(--text-muted); }
+
+.st-src-ic {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-surface); border: 1px solid var(--border-hover); color: var(--accent-primary);
+}
+.st-src-ic svg { width: 17px; height: 17px; }
+
+.st-src-body { min-width: 0; }
+.st-src-name { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.st-src-url { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); word-break: break-all; margin-top: 3px; }
+.st-src-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+.st-tag {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: var(--radius-full);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary);
+}
+.st-tag.is-ok { color: var(--color-success); border-color: var(--color-success-dim); background: var(--color-success-dim); }
+.st-tag.is-info { color: var(--color-info); border-color: var(--color-info-dim); background: var(--color-info-dim); }
+.st-tag.is-warn { color: var(--color-warning); border-color: var(--color-warning-dim); background: var(--color-warning-dim); }
+.st-tag.is-off { color: var(--text-muted); }
+
+.st-src-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 8px; }
+
+/* ---------- Действия, сообщения, пустые состояния ---------- */
+.st-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-md); }
+
+.st-msg {
+  margin-top: var(--space-sm); padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600; line-height: 1.55;
+  border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-secondary);
+}
+.st-msg.is-ok { color: var(--color-success); border-color: var(--color-success-dim); background: var(--color-success-dim); }
+.st-msg.is-warn { color: var(--color-warning); border-color: var(--color-warning-dim); background: var(--color-warning-dim); }
+.st-msg.is-error { color: var(--color-danger); border-color: var(--color-danger-dim); background: var(--color-danger-dim); }
+.st-list { margin: 6px 0 0; padding-left: 18px; }
+
+.st-empty {
+  display: flex; flex-direction: column; gap: 8px; padding: 22px; text-align: center;
+  border: 1px dashed var(--border-hover); border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 13px; line-height: 1.6;
+}
+.st-empty-title { font-weight: 800; color: var(--text-secondary); font-size: 14px; }
+
+.st-code {
+  font-family: var(--font-mono); color: var(--accent-primary);
+  background: var(--bg-input); border: 1px solid var(--border-subtle);
+  padding: 1px 6px; border-radius: 5px; font-size: 11px;
+}
+
+.st-path {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); word-break: break-all;
+}
+.st-path svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--color-warning); }
+
+@media (max-width: 720px) {
+  .st-src { grid-template-columns: minmax(0, 1fr); }
+  .st-src-ic { display: none; }
+  .st-actions .btn { flex: 1; }
+  .st-drop { flex-direction: column; text-align: center; }
+}

@@ -1,0 +1,112 @@
+/* ФАЙЛ: widgets/deaths/dashboard/styles/base.css — v1 (токены, шапка, полоса «сейчас на экране») */
+.dd-main {
+    --dd-surface: var(--bg-surface);
+    --dd-surface-2: var(--bg-surface-hover);
+    --dd-field: var(--bg-input);
+    --dd-ink: var(--text-primary);
+    --dd-ink-2: var(--text-secondary);
+    --dd-ink-3: var(--text-muted);
+    --dd-line: var(--border-subtle);
+    --dd-line-2: var(--border-hover);
+    --dd-blood: var(--color-danger);
+    --dd-blood-dim: var(--color-danger-dim);
+    --dd-amber: var(--color-warning);
+    --dd-amber-dim: var(--color-warning-dim);
+    --dd-neon: var(--accent-primary);
+    --dd-neon-dim: var(--accent-primary-dim);
+    --dd-neon-glow: var(--accent-glow);
+    --dd-hot: var(--accent-secondary);
+    --dd-hot-dim: var(--accent-secondary-dim);
+    --dd-cyan: var(--color-info);
+    --dd-cyan-dim: var(--color-info-dim);
+    --dd-ok: var(--color-success);
+    --dd-ok-dim: var(--color-success-dim);
+    --dd-scrim: var(--bg-modal);
+    --dd-deep: var(--bg-app);
+    --dd-shadow: rgba(0, 0, 0, 0.5);
+
+    display: flex; flex-direction: column; gap: var(--space-md);
+    height: 100%; overflow-y: auto; padding-right: 10px; position: relative;
+}
+.dd-main::-webkit-scrollbar { width: 10px; }
+.dd-main::-webkit-scrollbar-track { background: var(--dd-deep); border-radius: 6px; }
+.dd-main::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--dd-blood), var(--dd-amber)); border-radius: 6px; border: 2px solid var(--dd-deep); }
+.dd-main::-webkit-scrollbar-thumb:hover { background: var(--dd-blood); }
+
+.dd-card { margin-bottom: 0; padding: 16px; flex-shrink: 0; }
+.dd-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--dd-line); }
+.dd-head-left, .dd-head-right { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
+.dd-title { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--dd-ink); margin-right: 6px; }
+.dd-title svg { color: var(--dd-blood); }
+
+.dd-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--radius-full); font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; border: 1px solid var(--dd-line-2); background: var(--dd-field); color: var(--dd-ink-2); transition: all 0.3s ease; }
+.dd-badge-live { background: var(--dd-ok-dim); color: var(--dd-ok); border-color: var(--dd-ok); }
+.dd-badge-info { background: var(--dd-cyan-dim); color: var(--dd-cyan); border-color: var(--dd-cyan); }
+.dd-badge-warn { background: var(--dd-amber-dim); color: var(--dd-amber); border-color: var(--dd-amber); }
+.dd-badge-off { background: var(--dd-blood-dim); color: var(--dd-blood); border-color: var(--dd-blood-dim); }
+.dd-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: ddPulse 1.6s infinite alternate ease-in-out; }
+@keyframes ddPulse { 0% { opacity: 0.35; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+
+.dd-icon-btn { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--dd-line-2); background: var(--dd-field); color: var(--dd-ink-2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.dd-icon-btn svg { width: 18px; height: 18px; }
+.dd-icon-btn:hover:not(:disabled) { color: var(--dd-blood); border-color: var(--dd-blood); box-shadow: 0 0 12px var(--dd-blood-dim); }
+.dd-icon-btn.is-spin svg { animation: ddSpin 0.8s linear infinite; }
+@keyframes ddSpin { 100% { transform: rotate(360deg); } }
+
+.dd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid var(--dd-line-2); background: var(--dd-surface); color: var(--dd-ink); font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.4px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+.dd-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.dd-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.dd-btn:active:not(:disabled) { transform: scale(0.97); }
+.dd-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.dd-btn-sm { padding: 7px 12px; font-size: 11px; }
+.dd-grow { flex: 1; }
+.dd-btn-primary { background: var(--dd-blood); color: var(--dd-ink); border-color: var(--dd-blood); box-shadow: 0 0 16px var(--dd-blood-dim); }
+.dd-btn-primary:hover:not(:disabled) { box-shadow: 0 0 26px var(--dd-blood-dim); }
+.dd-btn-ghost { background: transparent; color: var(--dd-ink-2); }
+.dd-btn-ghost:hover:not(:disabled) { color: var(--dd-blood); border-color: var(--dd-blood); background: var(--dd-blood-dim); }
+.dd-btn-danger { background: transparent; color: var(--dd-blood); border-color: var(--dd-blood-dim); }
+.dd-btn-danger:hover:not(:disabled) { background: var(--dd-blood-dim); border-color: var(--dd-blood); }
+.dd-btn-danger.is-armed, .dd-btn-ghost.is-armed { background: var(--dd-blood); color: var(--dd-ink); border-color: var(--dd-blood); animation: ddPulse 1s infinite alternate ease-in-out; }
+.dd-btn-undo { background: var(--dd-amber-dim); color: var(--dd-amber); border-color: var(--dd-amber); }
+.dd-btn-undo:hover:not(:disabled) { background: var(--dd-amber); color: var(--dd-deep); }
+.dd-btn-undo.is-hidden { display: none; }
+
+.dd-mini-btn { width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; border: 1px solid var(--dd-line-2); background: var(--dd-surface); color: var(--dd-ink-2); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.18s; }
+.dd-mini-btn svg { width: 14px; height: 14px; }
+.dd-mini-btn:hover:not(:disabled) { color: var(--dd-amber); border-color: var(--dd-amber); background: var(--dd-amber-dim); }
+.dd-mini-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+.dd-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; padding: 11px 14px; background: var(--dd-field); border-radius: var(--radius-sm); border: 1px solid var(--dd-line); transition: border-color 0.2s; }
+.dd-toggle:hover { border-color: var(--dd-line-2); }
+.dd-toggle > span { font-size: 12px; font-weight: 700; color: var(--dd-ink-2); display: flex; flex-direction: column; gap: 2px; }
+.dd-toggle-note { font-style: normal; font-size: 10px; font-weight: 600; color: var(--dd-ink-3); letter-spacing: 0.2px; }
+.dd-toggle input { display: none; }
+.dd-toggle-head { padding: 7px 12px; gap: 10px; border-color: var(--dd-line-2); }
+.dd-toggle-head > span { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--dd-ink-3); white-space: nowrap; }
+.dd-track { width: 36px; height: 20px; background: var(--dd-line-2); border-radius: 10px; position: relative; transition: 0.3s; flex-shrink: 0; }
+.dd-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--dd-ink); border-radius: 50%; transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.dd-toggle input:checked + .dd-track { background: var(--dd-blood); box-shadow: 0 0 10px var(--dd-blood-dim); }
+.dd-toggle input:checked + .dd-track::after { transform: translateX(16px); background: var(--dd-ink); }
+
+.dd-now { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 14px 18px; background: var(--dd-field); border: 1px solid var(--dd-line); border-left: 3px solid var(--now-accent, var(--dd-blood)); border-radius: var(--radius-md); transition: opacity 0.3s ease, border-color 0.3s ease; }
+.dd-now.is-off { opacity: 0.55; }
+.dd-now-figure { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.dd-now-count { font-size: 40px; font-weight: 900; line-height: 1; color: var(--now-accent, var(--dd-blood)); font-variant-numeric: tabular-nums; text-shadow: 0 0 22px var(--dd-blood-dim); }
+.dd-now-label { font-size: 12px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; color: var(--dd-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dd-now-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.dd-now-combo { font-size: 12px; font-weight: 900; font-style: italic; letter-spacing: 1px; padding: 4px 12px; border-radius: var(--radius-full); border: 1px solid var(--dd-line-2); color: var(--dd-ink-3); background: var(--dd-surface); transition: all 0.25s ease; }
+.dd-now-combo.is-active { color: var(--now-combo, var(--dd-amber)); border-color: var(--now-combo, var(--dd-amber)); background: var(--dd-amber-dim); box-shadow: 0 0 14px var(--dd-amber-dim); }
+.dd-now-source { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--dd-ink-3); }
+
+.dd-toasts { position: sticky; bottom: 8px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; z-index: 20; margin-top: auto; }
+.dd-toast { padding: 10px 16px; border-radius: var(--radius-sm); background: var(--dd-surface); border: 1px solid var(--dd-line-2); color: var(--dd-ink); font-size: 13px; font-weight: 700; box-shadow: 0 10px 30px var(--dd-shadow); animation: ddToastIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 360px; }
+.dd-toast.is-success { border-color: var(--dd-ok); color: var(--dd-ok); }
+.dd-toast.is-error { border-color: var(--dd-blood); color: var(--dd-blood); }
+.dd-toast.is-out { opacity: 0; transform: translateY(8px); transition: 0.3s; }
+@keyframes ddToastIn { from { opacity: 0; transform: translateY(12px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 720px) {
+    .dd-head { flex-direction: column; align-items: flex-start; }
+    .dd-now { flex-direction: column; align-items: flex-start; }
+    .dd-now-side { align-items: flex-start; }
+}

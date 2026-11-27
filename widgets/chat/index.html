@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Twitch Chat Widget</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Twitch Chat Widget</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="bubble.css">
 </head>
 <body>
-  
-  <div id="chat-container">
-    <div id="chat-messages"></div>
-  </div>
-  
-  <!-- Относительный путь для стабильной работы локально -->
-  <script src="../shared/tmi.min.js"></script>
-  <script type="module" src="script.js"></script>
+<div id="chat-container" data-dir="bottom" data-mask="on" data-preview="off" data-paused="off">
+<div id="chat-messages"
+data-avatars="on"
+data-badges="on"
+data-badge-style="pill"
+data-time="on"
+data-replies="on"
+data-reply="bar"
+data-anim="rise"
+data-upper="off"
+data-width="fit"></div>
+<div class="chat-empty">
+<span class="chat-empty-dot"></span>
+<span class="chat-empty-title">Чат на связи</span>
+<span class="chat-empty-sub">Сообщения появятся здесь. Отправьте тестовое из дашборда «Оверлеи 2.0».</span>
+</div>
+<div class="chat-paused"><span class="chat-paused-dot"></span>ПОТОК НА ПАУЗЕ</div>
+</div>
+<script src="../shared/tmi.min.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>

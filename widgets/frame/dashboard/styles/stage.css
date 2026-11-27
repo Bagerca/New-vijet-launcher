@@ -1,0 +1,53 @@
+/* ФАЙЛ: widgets/frame/dashboard/styles/stage.css — v1 (стенд 1400×850 с моком камеры) */
+.fd-stage {
+position: relative; width: 100%;
+aspect-ratio: 28 / 17; max-height: 470px; min-height: 250px;
+border-radius: var(--radius-md);
+border: 2px solid var(--fd-line-2);
+overflow: hidden;
+background-color: var(--fd-deep);
+background-image:
+radial-gradient(circle at 50% 45%, var(--fd-surface-2) 0%, transparent 68%),
+linear-gradient(180deg, var(--fd-surface) 0%, var(--fd-deep) 100%);
+transition: border-color 0.35s ease, box-shadow 0.35s ease;
+box-shadow: 0 0 34px var(--fd-neon-dim), inset 0 0 70px var(--fd-shadow);
+}
+.fd-stage.is-off { box-shadow: inset 0 0 70px var(--fd-shadow); border-color: var(--fd-line); }
+.fd-stage-inner { position: absolute; top: 50%; left: 50%; transform-origin: center center; z-index: 2; }
+.fd-cam-mock {
+position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+border-radius: 24px; overflow: hidden;
+display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+background:
+radial-gradient(circle at 30% 25%, var(--fd-surface-2) 0%, transparent 60%),
+linear-gradient(135deg, var(--fd-surface) 0%, var(--fd-deep) 100%);
+border: 1px solid var(--fd-line);
+}
+.fd-cam-grid {
+position: absolute; inset: 0;
+background-image:
+linear-gradient(var(--fd-grid-line) 1px, transparent 1px),
+linear-gradient(90deg, var(--fd-grid-line) 1px, transparent 1px);
+background-size: 64px 64px;
+}
+.fd-cam-label { position: relative; font-size: 84px; font-weight: 900; letter-spacing: 22px; color: var(--fd-ink-3); opacity: 0.5; }
+.fd-cam-sub { position: relative; font-family: var(--font-mono); font-size: 22px; font-weight: 700; letter-spacing: 4px; color: var(--fd-ink-3); opacity: 0.45; }
+.fd-frame-host { position: absolute; inset: 0; }
+.fd-iframe { width: 100%; height: 100%; border: none; background: transparent; overflow: hidden; display: block; }
+.fd-stage-loading { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--fd-deep); color: var(--fd-ink-3); font-weight: 700; font-size: 13px; transition: opacity 0.35s ease; }
+.fd-stage-loading.is-hidden { opacity: 0; pointer-events: none; }
+.fd-spinner { width: 18px; height: 18px; border: 2px solid var(--fd-line-2); border-top-color: var(--fd-neon); border-radius: 50%; animation: fdSpin 0.8s linear infinite; }
+.fd-stage-off { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; background: var(--fd-scrim); backdrop-filter: blur(6px); transition: opacity 0.3s ease; }
+.fd-stage-off.is-hidden { opacity: 0; pointer-events: none; }
+.fd-stage-off-icon { color: var(--fd-ink-3); opacity: 0.8; animation: fdFloat 3s infinite alternate ease-in-out; }
+.fd-stage-off-icon svg { width: 38px; height: 38px; }
+@keyframes fdFloat { 0% { transform: translateY(0); } 100% { transform: translateY(-7px); } }
+.fd-stage-off-title { font-size: 17px; font-weight: 900; color: var(--fd-ink); }
+.fd-stage-off-sub { font-size: 12px; color: var(--fd-ink-2); max-width: 430px; line-height: 1.5; }
+.fd-stage-hud { position: absolute; top: 12px; left: 12px; z-index: 8; display: flex; gap: 8px; pointer-events: none; }
+.fd-hud-chip { padding: 6px 13px; border-radius: var(--radius-full); background: var(--fd-scrim); border: 1px solid var(--fd-cyan); color: var(--fd-cyan); font-size: 10.5px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; backdrop-filter: blur(8px); }
+.fd-hud-chip.is-off { border-color: var(--fd-line-2); color: var(--fd-ink-3); }
+@media (max-width: 900px) {
+.fd-stage { aspect-ratio: 16 / 10; max-height: 340px; }
+.fd-cam-label { font-size: 60px; letter-spacing: 14px; }
+}

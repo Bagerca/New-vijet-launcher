@@ -1,108 +1,89 @@
-/* ФАЙЛ: widgets/player/queue.js */
+/* ФАЙЛ: widgets/player/queue.js — v6 (зеркало серверной очереди + утилиты) */
 
-export class PlayerQueue {
-    constructor(onQueueUpdateCallback) {
-        this.userQueue = [];
-        this.bgPlaylist = [];
-        this.bgShuffleBag = [];
-        this.shuffleEnabled = true;
-        this.onQueueUpdate = onQueueUpdateCallback;
-        
-        this.load();
-    }
+export function extractYouTubeId(url) {
+if (!url) return null;
+const s = String(url).trim();
+const list = s.match(/[?&]list=([^#&?]+)/);
+if (list) return { type: 'playlist', id: list[1] };
+const video = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);
+if (video) return { type: 'video', id: video[1] };
+if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return { type: 'video', id: s };
+return null;
+}
 
-    load() {
-        try {
-            const saved = localStorage.getItem('uso_queue');
-            if (saved) this.userQueue = JSON.parse(saved);
-            this.onQueueUpdate(this.userQueue.length);
-        } catch (e) { this.userQueue = []; }
-    }
+export function formatTime(sec) {
+const s = Math.max(0, Math.floor(Number(sec) || 0));
+const h = Math.floor(s / 3600);
+const m = Math.floor((s % 3600) / 60);
+const r = s % 60;
+if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+return `${m}:${String(r).padStart(2, '0')}`;
+}
 
-    save() {
-        try { localStorage.setItem('uso_queue', JSON.stringify(this.userQueue)); } catch(e) {}
-        this.onQueueUpdate(this.userQueue.length);
-    }
+export function thumbnailUrl(track, quality = 'mqdefault') {
+if (!track || !track.id || track.type === 'playlist') return null;
+return `https://img.youtube.com/vi/${track.id}/${quality}.jpg`;
+}
 
-    extractData(url) {
-        if (!url) return null;
-        const str = url.trim();
-        const listMatch = str.match(/[?&]list=([^#&?]+)/);
-        if (listMatch) return { type: 'playlist', id: listMatch[1] };
-        
-        const cleanUrl = str.replace(/.*?http/, 'http');
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = cleanUrl.match(regExp);
-        if (match && match[2].length === 11) return { type: 'video', id: match[2] };
-        if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return { type: 'video', id: str };
-        return null;
-    }
+export class QueueMirror {
+constructor() {
+this.orders = [];
+this.playlist = [];
+this.order = [];
+this.nowPlaying = null;
+this.cursor = -1;
+this.shuffle = false;
+this.bgEnabled = false;
+this.enabled = true;
+this.canPrev = false;
+this.receivedAt = 0;
+this.hasSnapshot = false;
+}
 
-    updateBgPlaylist(urlsText, shuffleEnabled) {
-        const wasShuffle = this.shuffleEnabled;
-        this.shuffleEnabled = shuffleEnabled;
+apply(payload) {
+if (!payload) return;
+this.orders = Array.isArray(payload.orders) ? payload.orders : [];
+this.playlist = Array.isArray(payload.playlist) ? payload.playlist : [];
+this.order = Array.isArray(payload.order) ? payload.order : this.playlist.map(t => t.uid);
+this.nowPlaying = payload.nowPlaying || null;
+this.cursor = Number(payload.cursor ?? -1);
+this.shuffle = !!payload.shuffle;
+this.bgEnabled = !!payload.bgEnabled;
+this.enabled = payload.enabled !== false;
+this.canPrev = !!payload.canPrev;
+this.receivedAt = Date.now();
+this.hasSnapshot = true;
+}
 
-        const newPlaylist = (urlsText || '').split('\n')
-            .map(l => l.trim())
-            .filter(l => l !== '')
-            .map(url => this.extractData(url))
-            .filter(data => data !== null);
+get currentUid() { return this.nowPlaying ? this.nowPlaying.uid : null; }
 
-        // Чтобы не сбрасывать текущий трек, обновляем мешок ТОЛЬКО если плейлист реально изменился
-        const oldStr = JSON.stringify(this.bgPlaylist);
-        const newStr = JSON.stringify(newPlaylist);
+orderedPlaylist() {
+const map = new Map(this.playlist.map(t => [t.uid, t]));
+const seen = new Set();
+const out = [];
+this.order.forEach(uid => {
+const t = map.get(uid);
+if (t && !seen.has(uid)) { out.push(t); seen.add(uid); }
+});
+this.playlist.forEach(t => {
+if (!seen.has(t.uid)) { out.push(t); seen.add(t.uid); }
+});
+return out;
+}
 
-        if (oldStr !== newStr) {
-            this.bgPlaylist = newPlaylist;
-            this.populateShuffleBag();
-        } else if (wasShuffle !== shuffleEnabled) {
-            this.populateShuffleBag();
-        } else if (this.bgShuffleBag.length === 0 && this.bgPlaylist.length > 0) {
-            this.populateShuffleBag();
-        }
-    }
+filter(term) {
+const q = String(term || '').trim().toLowerCase();
+const match = (t) => !q
+|| String(t.title || '').toLowerCase().includes(q)
+|| String(t.user || '').toLowerCase().includes(q)
+|| String(t.id || '').toLowerCase().includes(q);
+return {
+orders: this.orders.filter(match),
+playlist: this.orderedPlaylist().filter(match)
+};
+}
 
-    populateShuffleBag() {
-        this.bgShuffleBag = [...this.bgPlaylist];
-        if (this.shuffleEnabled) {
-            for (let i = this.bgShuffleBag.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [this.bgShuffleBag[i], this.bgShuffleBag[j]] = [this.bgShuffleBag[j], this.bgShuffleBag[i]];
-            }
-        }
-    }
-
-    add(url, user) {
-        const ytData = this.extractData(url);
-        if (!ytData) return false;
-        
-        this.userQueue.push({ type: ytData.type, id: ytData.id, user: user, isBackground: false });
-        this.save();
-        return true;
-    }
-
-    clearUserQueue() {
-        this.userQueue = [];
-        this.save();
-    }
-
-    getNext(isBgEnabled) {
-        // 1. Приоритет зрителям
-        if (this.userQueue.length > 0) {
-            const track = this.userQueue.shift();
-            this.save();
-            return track;
-        } 
-        
-        // 2. Фоновый плейлист
-        if (isBgEnabled && this.bgPlaylist.length > 0) {
-            if (this.bgShuffleBag.length === 0) this.populateShuffleBag();
-            const track = this.bgShuffleBag.shift();
-            track.isBackground = true;
-            track.user = "STREAM VIBES";
-            return track;
-        }
-
-        return null;
-    }
+get total() {
+return this.orders.length + this.playlist.filter(t => !t.removed).length;
+}
 }

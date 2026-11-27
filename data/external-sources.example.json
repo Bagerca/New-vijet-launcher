@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "enabled": true,
+  "namePrefix": "🔗 [Внешний] ",
+  "scenes": [
+    "🔴 [Сцена] Начало",
+    "🗣 [Сцена] Общение",
+    "🎮 [Сцена] Игра",
+    "👋 [Сцена] Конец"
+  ],
+  "defaults": {
+    "shutdown": false,
+    "reroute_audio": true,
+    "monitor": "both",
+    "css": "body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }"
+  },
+  "sources": [
+    {
+      "id": "twitch-subs-notify",
+      "name": "Уведы о подписках (Twitch)",
+      "url": "https://dashboard.twitch.tv/widgets/alertbox#ВСТАВЬТЕ_JWT_УВЕДОМЛЕНИЙ",
+      "width": 1920,
+      "height": 1080,
+      "enabled": true,
+      "transform": { "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+      "note": "Растянут на весь экран. Порядок в массиве = порядок слоёв. monitor: both — слышат стример и зрители; stream — только зрители; monitor — только стример. Можно задать per-source."
+    },
+    {
+      "id": "meme-alerts",
+      "name": "Мемалертс",
+      "url": "https://memealerts.com/r/ВСТАВЬТЕ_ID?obsToken=ВСТАВЬТЕ_JWT&mode=OBS",
+      "width": 1920,
+      "height": 1080,
+      "enabled": true,
+      "transform": { "positionX": 0, "positionY": 0, "scaleX": 1, "scaleY": 1 },
+      "note": "Мемы на весь экран."
+    },
+    {
+      "id": "twitch-channel-points",
+      "name": "Баллы канала (Twitch)",
+      "url": "https://dashboard.twitch.tv/widgets/alertbox#ВСТАВЬТЕ_JWT_БАЛЛОВ",
+      "width": 1280,
+      "height": 720,
+      "enabled": true,
+      "transform": { "positionX": 0, "positionY": 0, "scaleX": 1.5, "scaleY": 1.5 },
+      "note": "Источник 1280x720 растянут в 1.5 раза — алерты крупнее. Если встают криво, правьте positionX/positionY и scale прямо здесь, затем «Применить в OBS»."
+    },
+    {
+      "id": "da-dons",
+      "name": "Доны (левый угол)",
+      "url": "https://www.donationalerts.com/widget/alerts?group_id=4&token=ВСТАВЬТЕ_ТОКЕН_DA",
+      "width": 640,
+      "height": 400,
+      "enabled": true,
+      "transform": { "positionX": 24, "positionY": 620, "scaleX": 0.85, "scaleY": 0.85 },
+      "note": "Мелкие суммы. Низ блока на 960 — 120 px от пола экрана."
+    },
+    {
+      "id": "da-subs",
+      "name": "Подписчики (правый угол)",
+      "url": "https://www.donationalerts.com/widget/alerts?group_id=2&token=ВСТАВЬТЕ_ТОКЕН_DA",
+      "width": 480,
+      "height": 320,
+      "enabled": true,
+      "transform": { "positionX": 1536, "positionY": 24, "scaleX": 0.75, "scaleY": 0.75 },
+      "note": "Самый маленький блок, правый верхний угол."
+    },
+    {
+      "id": "da-donations",
+      "name": "Донаты (центр)",
+      "url": "https://www.donationalerts.com/widget/alerts?group_id=3&token=ВСТАВЬТЕ_ТОКЕН_DA",
+      "width": 900,
+      "height": 600,
+      "enabled": true,
+      "transform": { "positionX": 510, "positionY": 240, "scaleX": 1, "scaleY": 1 },
+      "note": "Крупные суммы. Ровно по центру 1920x1080, заметно больше донов."
+    }
+  ]
+}

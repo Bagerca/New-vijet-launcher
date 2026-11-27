@@ -1,7 +1,7 @@
 {
   "name": "stream-launcher",
   "productName": "Stream Pack Launcher",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "OBS Auto-Setup Launcher",
   "main": "main.js",
   "scripts": {

@@ -1,0 +1,207 @@
+/* ФАЙЛ: css/views/widgets.css — v1 (экран «Оверлеи 1.0»: очередь на перенос, табы, поиск, карточки) */
+
+/* ---------- Панель «Очередь на перенос» ---------- */
+.wg-migration { border-color: var(--accent-secondary-dim); }
+.wg-mig-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); flex-wrap: wrap; }
+.wg-mig-left { display: flex; align-items: flex-start; gap: 14px; min-width: 0; flex: 1; }
+.wg-mig-ic {
+  width: 46px; height: 46px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px;
+  background: var(--accent-secondary-dim);
+  border: 1px solid var(--accent-secondary);
+  color: var(--accent-secondary);
+  box-shadow: 0 0 16px var(--accent-secondary-dim);
+}
+.wg-mig-ic svg { width: 22px; height: 22px; }
+.wg-mig-copy { min-width: 0; }
+.wg-mig-title { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
+.wg-mig-sub { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; max-width: 560px; }
+.wg-mig-score { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; text-align: right; }
+.wg-mig-big {
+  font-size: 40px; font-weight: 900; line-height: 1;
+  color: var(--color-warning);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px var(--color-warning-dim);
+}
+.wg-mig-big-label { font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.wg-mig-fraction { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 4px; }
+
+/* Карта переноса: сегмент на каждый виджет манифеста */
+.wg-map { display: flex; gap: 3px; margin: var(--space-sm) 0; }
+.wg-seg { flex: 1; height: 8px; border-radius: var(--radius-full); background: var(--border-hover); transition: background 0.3s ease, box-shadow 0.3s ease; }
+.wg-seg.is-done { background: linear-gradient(90deg, var(--accent-primary), var(--color-info)); box-shadow: 0 0 8px var(--accent-primary-dim); }
+
+/* Ряды «Готово / В очереди» с чипами */
+.wg-mig-rows { display: flex; flex-direction: column; gap: 10px; margin-top: var(--space-sm); }
+.wg-mig-row { display: flex; align-items: flex-start; gap: 12px; }
+.wg-row-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  flex-shrink: 0; width: 150px; padding-top: 5px;
+  font-size: 10.5px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.wg-row-label svg { width: 13px; height: 13px; flex-shrink: 0; }
+.wg-row-label.is-done { color: var(--color-success); }
+.wg-row-label.is-todo { color: var(--color-warning); }
+.wg-chip-row { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.wg-row-empty { font-size: 12px; color: var(--text-muted); font-weight: 600; padding: 4px 0; }
+
+.wg-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: var(--radius-full);
+  border: 1px solid var(--border-hover); background: var(--bg-input);
+  color: var(--text-secondary); font-family: inherit; font-size: 11.5px; font-weight: 700;
+  cursor: pointer; text-decoration: none; transition: all 0.18s ease;
+}
+.wg-chip svg { width: 13px; height: 13px; flex-shrink: 0; }
+.wg-chip:active { transform: scale(0.96); }
+.wg-chip.is-done { color: var(--color-success); border-color: var(--color-success-dim); background: var(--color-success-dim); }
+.wg-chip.is-done:hover { border-color: var(--color-success); transform: translateY(-1px); box-shadow: 0 0 12px var(--color-success-dim); }
+.wg-chip.is-todo:hover { color: var(--color-warning); border-color: var(--color-warning); background: var(--color-warning-dim); transform: translateY(-1px); }
+
+/* Футер панели: тумблер «показывать перенесённые» + кнопка 2.0 */
+.wg-mig-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: var(--space-sm); flex-wrap: wrap;
+  margin-top: var(--space-md); padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+.wg-toggle { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.wg-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.wg-toggle-track {
+  position: relative; width: 36px; height: 20px; flex-shrink: 0;
+  border-radius: 10px; background: var(--border-hover);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.wg-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--text-primary);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+}
+.wg-toggle input:checked + .wg-toggle-track { background: var(--accent-primary); box-shadow: 0 0 10px var(--accent-glow); }
+.wg-toggle input:checked + .wg-toggle-track::after { transform: translateX(16px); background: var(--bg-app); }
+.wg-toggle input:focus-visible + .wg-toggle-track { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.wg-toggle-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); transition: color 0.2s ease; }
+.wg-toggle:hover .wg-toggle-label { color: var(--text-primary); }
+
+/* ---------- Тулбар: табы категорий + поиск ---------- */
+.wg-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-sm); flex-wrap: wrap;
+  margin-bottom: var(--space-md); padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative; z-index: 1;
+}
+.wg-tabs { flex: 1; min-width: 0; flex-wrap: wrap; gap: var(--space-xs); margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.wg-tab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; }
+.wg-tab-count {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 800;
+  padding: 1px 7px; border-radius: var(--radius-full);
+  background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-muted);
+}
+.wg-tab.active .wg-tab-count { background: var(--accent-secondary); border-color: var(--accent-secondary); color: var(--text-primary); }
+.wg-tab-count.is-zero { opacity: 0.45; }
+
+.wg-search { position: relative; width: 320px; max-width: 100%; }
+.wg-search .search-input { padding-right: 46px; }
+.wg-search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 8px; background: transparent;
+  color: var(--text-muted); cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+/* Глобальный .search-wrapper svg абсолютит все SVG — возвращаем иконку кнопки в поток */
+.wg-search .wg-search-clear svg { position: static; left: auto; top: auto; transform: none; width: 14px; height: 14px; color: inherit; }
+.wg-search-clear:hover { color: var(--color-danger); background: var(--color-danger-dim); }
+.wg-search-clear.is-hidden { display: none; }
+
+/* ---------- Секции «Осталось перенести» / «Уже в 2.0» ---------- */
+.wg-section { margin-bottom: var(--space-lg); position: relative; z-index: 1; }
+.wg-section-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-sm); }
+.wg-section-title { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; letter-spacing: -0.3px; color: var(--text-primary); }
+.wg-section-title svg { width: 20px; height: 20px; flex-shrink: 0; }
+.wg-section-title.is-todo svg { color: var(--color-warning); filter: drop-shadow(0 0 6px var(--color-warning-dim)); }
+.wg-section-title.is-done svg { color: var(--color-success); filter: drop-shadow(0 0 6px var(--color-success-dim)); }
+.wg-count-pill {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 800;
+  padding: 2px 10px; border-radius: var(--radius-full);
+  background: var(--bg-surface); border: 1px solid var(--border-hover); color: var(--text-secondary);
+}
+.wg-section-hint { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; max-width: 640px; }
+.wg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-md); align-items: stretch; }
+
+/* Пустые состояния (is-hidden скоуплен только к wg-, чтобы не ломать opacity-переходы дашбордов) */
+.wg-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 48px 20px; text-align: center;
+  border: 2px dashed var(--border-hover); border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+.wg-empty svg { width: 28px; height: 28px; opacity: 0.5; }
+.wg-empty-text { font-size: 13px; font-weight: 600; line-height: 1.5; max-width: 420px; }
+.wg-empty.is-hidden { display: none; }
+
+/* ---------- Карточка виджета ---------- */
+/* display задаётся инлайн из JS (живой поиск), здесь только колонка и внутренняя раскладка */
+.wg-card { flex-direction: column; gap: var(--space-sm); margin-bottom: 0; min-width: 0; padding: var(--space-md); }
+.wg-card.is-migrated { border-color: var(--color-success-dim); }
+.wg-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm); }
+.wg-card-head > .flex-1 { min-width: 0; }
+.wg-card-title { margin: 2px 0 4px; line-height: 1.3; }
+.wg-card-desc { line-height: 1.5; margin-bottom: 8px; }
+.wg-card-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-muted);
+}
+.wg-card-tag svg { width: 12px; height: 12px; flex-shrink: 0; }
+.wg-card-tag.is-done { color: var(--color-success); border-color: var(--color-success-dim); background: var(--color-success-dim); }
+.wg-card-tag.is-todo { color: var(--color-warning); border-color: var(--color-warning-dim); background: var(--color-warning-dim); }
+.wg-card-master { flex-shrink: 0; padding-top: 2px; }
+.wg-card-master .control-group { width: auto; margin: 0; padding: 0; border: none; }
+.wg-card-master .toggle-wrapper { padding: 0; gap: 0; }
+.wg-card-master .toggle-label { display: none; }
+.wg-fieldset { border: none; padding: 0; margin: 0; min-width: 0; }
+.wg-card-foot {
+  display: flex; flex-wrap: wrap; gap: var(--space-xs);
+  margin-top: var(--space-sm); padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+.wg-card-foot .btn { flex: 1; min-width: 120px; padding: 10px 12px; font-size: 11.5px; white-space: nowrap; }
+.wg-card-foot .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.wg-btn-v2 { text-decoration: none; }
+
+/* Подсветка карточки при прыжке из чипов очереди */
+.wg-card.is-flash { animation: wgCardFlash 1.25s ease-out; }
+@keyframes wgCardFlash {
+  0% { border-color: var(--accent-primary); box-shadow: 0 0 0 1px var(--accent-primary), 0 0 30px var(--accent-glow); }
+  60% { border-color: var(--accent-primary); box-shadow: 0 0 0 1px var(--accent-primary), 0 0 22px var(--accent-primary-dim); }
+  100% { border-color: var(--border-subtle); box-shadow: none; }
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 1250px) {
+  .wg-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+@media (max-width: 900px) {
+  .wg-mig-head { flex-direction: column; }
+  .wg-mig-score { flex-direction: row; align-items: baseline; gap: 10px; text-align: left; }
+  .wg-mig-row { flex-direction: column; gap: 6px; }
+  .wg-row-label { width: auto; padding-top: 0; }
+  .wg-toolbar { flex-direction: column; align-items: stretch; }
+  .wg-search { width: 100%; }
+}
+@media (max-width: 720px) {
+  .wg-grid { grid-template-columns: 1fr; }
+  .wg-section-head { flex-direction: column; align-items: stretch; }
+  .wg-card-foot { flex-direction: column; }
+  .wg-card-foot .btn { width: 100%; min-width: 0; }
+  .wg-mig-foot { flex-direction: column; align-items: stretch; }
+  .wg-mig-foot .btn { width: 100%; }
+  .wg-mig-left { flex-direction: column; }
+}

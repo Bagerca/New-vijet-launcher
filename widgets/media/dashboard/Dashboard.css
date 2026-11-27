@@ -1,0 +1,4 @@
+/* ФАЙЛ: widgets/media/dashboard/Dashboard.css — v1 (агрегатор стилей панели медиа) */
+@import url('./styles/base.css');
+@import url('./styles/stage.css');
+@import url('./styles/panels.css');

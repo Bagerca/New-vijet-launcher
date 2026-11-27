@@ -1,3 +1,11 @@
 node_modules/
 .electron-data/
 dist/
+packs/
+
+# === ПРИВАТНЫЕ ДАННЫЕ СТРИМЕРА ===
+# Локальный "ключ": ссылки DonationAlerts / Twitch AlertBox / MemeAlerts с токенами.
+# Живёт только на машине стримера. В репозиторий не попадает НИКОГДА.
+data/external-sources.json
+data/external-sources.backup.json
+data/external-sources.json.tmp

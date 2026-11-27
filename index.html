@@ -1,29 +1,31 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <!-- CSP-политика для устранения предупреждения Electron и разрешения загрузки шрифтов/API -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http: ws: wss:;">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stream Pack Launcher</title>
-
-  <!-- Подключение нужных проекту шрифтов -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
-
-  <!-- Подключение токенов тем и глобальных стилей SPA -->
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<!-- CSP-политика для устранения предупреждения Electron и разрешения загрузки шрифтов/API -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http: ws: wss:;">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Pack Launcher</title>
+<!-- Подключение нужных проекту шрифтов -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
+<!-- Токены тем и глобальные стили SPA -->
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/style.css">
+<!-- Стили экранов и переиспользуемых компонентов (без инжекта <style> из JS) -->
+<link rel="stylesheet" href="css/views/home.css">
+<link rel="stylesheet" href="css/views/widgets.css">
+<link rel="stylesheet" href="css/views/widgets-v2.css">
+<link rel="stylesheet" href="css/views/settings.css">
+<link rel="stylesheet" href="css/components/external-sources.css">
 </head>
 <body>
-  
-  <!-- Единая точка монтирования SPA-приложения -->
-  <div id="app">
-    <!-- Сюда JS-роутер будет динамически подгружать интерфейс -->
-  </div>
-  
-  <!-- Точка входа в логику -->
-  <script type="module" src="js/app.js"></script>
+<!-- Единая точка монтирования SPA-приложения -->
+<div id="app">
+<!-- Сюда JS-роутер будет динамически подгружать интерфейс -->
+</div>
+<!-- Точка входа в логику -->
+<script type="module" src="js/app.js"></script>
 </body>
 </html>
